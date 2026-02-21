@@ -78,8 +78,10 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
-  - Home: index.md
-  - Getting Started: getting-started.md
+  - Home:
+      - index.md
+      - Getting Started: getting-started.md
+      - Contributing: contributing.md
   - Runbooks:
       - Overview: runbooks/index.md
       - Gallery: runbooks/gallery.md
@@ -91,6 +93,6 @@ nav:
       - Cloud Apps: runbooks/cloud-apps/index.md
       - Azure Infrastructure: runbooks/azure-infrastructure/index.md
       - Okta: runbooks/okta/index.md
-  - Log Sources: log-sources.md
-  - MITRE Coverage: mitre-coverage.md
-  - Contributing: contributing.md
+  - Reference:
+      - Log Sources: log-sources.md
+      - MITRE Coverage: mitre-coverage.md
