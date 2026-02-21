@@ -17,3 +17,15 @@
     </a>
   </span>
 {% endblock %}
+
+{% block content %}
+  {% if page and page.meta and page.meta.id is defined and page.meta.id is string and page.meta.id[:3] == 'RB-' %}
+  <nav class="runbook-back-nav" aria-label="Back navigation">
+    <a href="{{ 'runbooks/gallery/' | url }}" class="back-to-gallery">
+      <span class="back-arrow">&larr;</span>
+      <span>Back to Runbooks</span>
+    </a>
+  </nav>
+  {% endif %}
+  {{ super() }}
+{% endblock %}

@@ -179,6 +179,121 @@ html {
   font-weight: 600;
 }
 
+/* ----- 2b. Active Tab & Search Enhancement ----- */
+
+/* Active tab — accent underline */
+.md-tabs__link--active {
+  color: var(--kql-accent) !important;
+  opacity: 1;
+  border-bottom: 2px solid var(--kql-accent);
+}
+
+[data-md-color-scheme="slate"] .md-tabs__link--active {
+  text-shadow: 0 0 12px var(--kql-glow);
+}
+
+/* Search bar — always prominent */
+[data-md-color-scheme="slate"] .md-search__input {
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+[data-md-color-scheme="slate"] .md-search__input::placeholder {
+  color: var(--kql-text-faint);
+}
+
+[data-md-color-scheme="slate"] .md-search__input:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.15);
+}
+
+/* ----- 2c. Breadcrumbs (navigation.path) ----- */
+
+.md-path {
+  margin-top: 0;
+  padding: 0.5rem 0 0;
+}
+
+[data-md-color-scheme="slate"] .md-path__link {
+  color: var(--kql-text-faint);
+  font-size: 0.75rem;
+  transition: color 0.2s ease;
+}
+
+[data-md-color-scheme="slate"] .md-path__link:hover {
+  color: var(--kql-accent);
+}
+
+[data-md-color-scheme="slate"] .md-path__separator {
+  color: var(--kql-text-faint);
+  opacity: 0.5;
+}
+
+/* ----- 2d. Back to Gallery & Back to Top ----- */
+
+.runbook-back-nav {
+  margin-bottom: 1.25rem;
+}
+
+.back-to-gallery {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #161b22;
+  color: var(--kql-text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.back-to-gallery:hover {
+  color: #58a6ff;
+  border-color: #58a6ff;
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.12);
+  text-decoration: none;
+}
+
+.back-to-gallery .back-arrow {
+  font-size: 1.1rem;
+  transition: transform 0.25s ease;
+}
+
+.back-to-gallery:hover .back-arrow {
+  transform: translateX(-3px);
+}
+
+[data-md-color-scheme="default"] .back-to-gallery {
+  background: #e8e6ed;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--kql-text-muted);
+}
+
+[data-md-color-scheme="default"] .back-to-gallery:hover {
+  color: var(--md-primary-fg-color);
+  border-color: var(--md-primary-fg-color);
+  box-shadow: none;
+}
+
+/* Back-to-top button */
+[data-md-color-scheme="slate"] .md-top {
+  background: rgba(22, 27, 34, 0.9);
+  border: 1px solid #30363d;
+  color: var(--kql-text-muted);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-md-color-scheme="slate"] .md-top:hover {
+  color: #58a6ff;
+  border-color: #58a6ff;
+}
+
 /* ----- 3. Dot Grid Background ----- */
 
 [data-md-color-scheme="slate"] .md-main {

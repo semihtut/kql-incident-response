@@ -29,9 +29,12 @@ theme:
     - navigation.sections
     - navigation.top
     - navigation.indexes
+    - navigation.tracking
+    - navigation.path
     - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.tabs.link
     - content.code.annotate
