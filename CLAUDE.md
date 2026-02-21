@@ -15,12 +15,18 @@ This project uses a multi-agent team. Each agent has a dedicated skill file in .
 4. **Arina** - IR Architect (.claude/agents/ir-architect.md) - Investigation flow design, decision trees, runbook logic
 5. **Yunus** - Threat Intel Lead (.claude/agents/threat-intel-lead.md) - MITRE ATT&CK mapping, TTP analysis, detection coverage
 6. **Alp** - QA Lead (.claude/agents/qa-lead.md) - Documentation quality, synthetic data, validation, CI/CD
+7. **Emre** - Web Architect (.claude/agents/web-architect.md) - MkDocs customization, frontend development, interactive components
+8. **Defne** - UX/Content Designer (.claude/agents/ux-designer.md) - Visual identity, page layouts, user experience, accessibility
 
 ### Communication Protocol
 - Leo (Coordinator) communicates with all agents and makes final decisions
 - Agents refer to each other by name in their outputs (e.g., "Hasan confirmed table schema", "Waiting for Arina's investigation flow before writing queries")
 - When an agent needs input from another agent, they explicitly state: "I need [Name] to provide [what] before I can proceed"
 - Workflow order for new runbooks: Arina (flow) → Hasan (tables) → Samet (queries) → Yunus (MITRE) → Alp (review)
+
+### Website Enhancement Workflow
+For website improvements: Defne (design spec) → Emre (implementation) → Alp (review)
+Defne defines what it should look like and why. Emre builds it. Alp validates quality.
 
 ## Agent Coordination Rules
 - Hasan (Platform Architect) must validate table names and schemas BEFORE Samet (KQL Engineer) writes queries
