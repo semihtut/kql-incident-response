@@ -11,11 +11,11 @@ hide:
 
 <div class="kql-hero-stats">
   <div class="kql-stat">
-    <span class="number">1</span>
+    <span class="number">2</span>
     <span class="label">Runbooks</span>
   </div>
   <div class="kql-stat">
-    <span class="number">15</span>
+    <span class="number">16</span>
     <span class="label">MITRE Techniques</span>
   </div>
   <div class="kql-stat">
@@ -115,6 +115,24 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 ## Latest Runbooks
 
 <div class="latest-runbooks">
+  <a class="runbook-card" href="runbooks/identity/impossible-travel-activity/">
+    <div class="runbook-card-header">
+      <span class="runbook-card-id">RB-0002</span>
+      <span class="severity-badge severity-medium">Medium</span>
+    </div>
+    <h3>Impossible Travel Activity</h3>
+    <div class="runbook-card-description">
+      Entra ID Identity Protection risk detection for geographically impossible sign-in pairs. Covers VPN false positive triage, token replay detection (T1550.004), and blast radius assessment.
+    </div>
+    <div class="runbook-card-footer">
+      <span class="mitre-tag mitre-initial-access">Initial Access</span>
+      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
+      <span class="mitre-tag mitre-cred-access">Cred Access</span>
+      <span class="mitre-tag mitre-persistence">Persistence</span>
+      <span class="tier-badge">Tier 1</span>
+      <span class="status-badge status-complete">Complete</span>
+    </div>
+  </a>
   <a class="runbook-card" href="runbooks/identity/unfamiliar-sign-in-properties/">
     <div class="runbook-card-header">
       <span class="runbook-card-id">RB-0001</span>
@@ -122,7 +140,7 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
     </div>
     <h3>Unfamiliar Sign-In Properties</h3>
     <div class="runbook-card-description">
-      Investigation runbook for Entra ID Identity Protection risk detection. Covers credential compromise, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.
+      Entra ID Identity Protection risk detection. Covers credential compromise via valid accounts, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.
     </div>
     <div class="runbook-card-footer">
       <span class="mitre-tag mitre-initial-access">Initial Access</span>
@@ -141,7 +159,7 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
 | Category | Runbooks | Status |
 |----------|----------|--------|
-| [Identity](runbooks/identity/index.md) | 1 completed | :material-check-circle:{ .severity-info } Active |
+| [Identity](runbooks/identity/index.md) | 2 completed | :material-check-circle:{ .severity-info } Active |
 | [Endpoint](runbooks/endpoint/index.md) | Planned | Tier 2 |
 | [Email](runbooks/email/index.md) | Planned | Tier 2 |
 | [Cloud Apps](runbooks/cloud-apps/index.md) | Planned | Tier 2 |

@@ -7,12 +7,12 @@ Investigation runbooks for identity-based alerts from Microsoft Entra ID, Identi
 | ID | Alert Name | Severity | Key Log Sources |
 |----|-----------|----------|-----------------|
 | RB-0001 | [Unfamiliar Sign-In Properties](unfamiliar-sign-in-properties.md) | Medium | SigninLogs, AADUserRiskEvents, AADRiskyUsers, AuditLogs, OfficeActivity |
+| RB-0002 | [Impossible Travel Activity](impossible-travel-activity.md) | Medium | SigninLogs, AADUserRiskEvents, AADNonInteractiveUserSignInLogs, AuditLogs, OfficeActivity |
 
 ## Planned Runbooks
 
 | Alert Name | Source Product | Priority |
 |-----------|---------------|----------|
-| Impossible travel activity | Identity Protection | Tier 1 |
 | MFA fatigue attack | Identity Protection | Tier 1 |
 | Suspicious browser sign-in | Identity Protection | Tier 1 |
 | Anonymous IP address sign-in | Identity Protection | Tier 1 |

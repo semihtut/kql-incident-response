@@ -47,22 +47,26 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
     </div>
   </a>
 
-  <div class="runbook-card runbook-planned" data-severity="medium" data-tactics="initial-access,cred-access">
+  <a class="runbook-card" href="../runbooks/identity/impossible-travel-activity/" data-severity="medium" data-tactics="initial-access,defense-evasion,cred-access,persistence,lateral-movement,collection">
     <div class="runbook-card-header">
       <span class="runbook-card-id">RB-0002</span>
       <span class="severity-badge severity-medium">Medium</span>
     </div>
     <h3>Impossible Travel Activity</h3>
     <div class="runbook-card-description">
-      Identity Protection risk detection for sign-ins from geographically distant locations within an impossible timeframe.
+      Entra ID Identity Protection risk detection for geographically impossible sign-in pairs. Covers VPN false positive triage, geo_distance_2points() speed calculation, token replay detection (T1550.004), and post-access blast radius assessment.
     </div>
     <div class="runbook-card-footer">
       <span class="mitre-tag mitre-initial-access">Initial Access</span>
+      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
       <span class="mitre-tag mitre-cred-access">Cred Access</span>
+      <span class="mitre-tag mitre-persistence">Persistence</span>
+      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
+      <span class="mitre-tag mitre-collection">Collection</span>
       <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-planned">Planned</span>
+      <span class="status-badge status-complete">Complete</span>
     </div>
-  </div>
+  </a>
 
   <div class="runbook-card runbook-planned" data-severity="high" data-tactics="initial-access,cred-access">
     <div class="runbook-card-header">

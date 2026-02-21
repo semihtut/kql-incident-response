@@ -36,6 +36,10 @@ jobs:
              docs/runbooks/identity/unfamiliar-sign-in-properties.md
           sed -i 's|\[mitre-mapping\.md\](mitre-mapping\.md)|[MITRE Coverage](../../mitre-coverage.md)|g' \
              docs/runbooks/identity/unfamiliar-sign-in-properties.md
+          cp runbooks/azure/identity/impossible-travel-activity/README.md \
+             docs/runbooks/identity/impossible-travel-activity.md
+          sed -i 's|\[mitre-mapping\.md\](mitre-mapping\.md)|[MITRE Coverage](../../mitre-coverage.md)|g' \
+             docs/runbooks/identity/impossible-travel-activity.md
 
       - name: Build documentation
         run: mkdocs build --strict
