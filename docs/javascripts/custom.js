@@ -41,7 +41,6 @@ function initGalleryFilters() {
 
       if (matchSev && matchTac) {
         card.style.display = "";
-        card.style.opacity = card.querySelector(".status-planned") ? "0.5" : "";
       } else {
         card.style.display = "none";
       }

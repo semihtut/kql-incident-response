@@ -687,23 +687,274 @@ html {
   border-color: transparent;
 }
 
-/* ----- 10. Runbook Gallery Cards (SOC Dashboard) ----- */
+/* ----- 10. Latest Runbooks — Featured Card ----- */
 
-/* Grid Container — fixed 3 columns */
+.latest-runbooks {
+  margin: 1.5rem 0;
+}
+
+/* Featured card — horizontal layout */
+.runbook-featured-card {
+  display: flex;
+  align-items: stretch;
+  background: rgba(22, 27, 34, 0.5);
+  border: 1px solid rgba(122, 162, 247, 0.1);
+  border-radius: var(--kql-radius-lg);
+  padding: 1.6rem 2rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-md-color-scheme="default"] .runbook-featured-card {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.runbook-featured-card:hover {
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-2px);
+  border-color: rgba(122, 162, 247, 0.25);
+  box-shadow:
+    0 0 30px rgba(122, 162, 247, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+[data-md-color-scheme="default"] .runbook-featured-card:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(90, 106, 207, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Left accent bar */
+.runbook-featured-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--kql-accent), var(--kql-accent-alt));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.runbook-featured-card:hover::before {
+  opacity: 1;
+}
+
+/* Left section — main content */
+.runbook-featured-left {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Top meta line: ID + severity + tier */
+.runbook-featured-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.runbook-featured-id {
+  font-size: 0.7rem;
+  font-family: var(--md-code-font, monospace);
+  color: var(--kql-accent);
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.runbook-featured-meta .severity-badge {
+  font-size: 0.6rem;
+  padding: 0.12rem 0.5rem;
+}
+
+.runbook-featured-meta .tier-badge {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.45rem;
+}
+
+/* Title */
+.runbook-featured-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--kql-text);
+}
+
+.runbook-featured-card:hover .runbook-featured-title {
+  color: var(--kql-accent);
+}
+
+[data-md-color-scheme="default"] .runbook-featured-title {
+  color: #1a1a2e;
+}
+
+[data-md-color-scheme="default"] .runbook-featured-card:hover .runbook-featured-title {
+  color: var(--md-primary-fg-color);
+}
+
+/* Description */
+.runbook-featured-desc {
+  font-size: 0.85rem;
+  color: var(--kql-text-muted);
+  line-height: 1.65;
+  margin: 0 0 1rem;
+  max-width: 600px;
+}
+
+/* MITRE tactic pills — inline, subtle */
+.runbook-featured-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mitre-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid;
+  transition: opacity 0.2s ease;
+  opacity: 0.75;
+}
+
+.runbook-featured-card:hover .mitre-pill {
+  opacity: 1;
+}
+
+.mitre-pill.mitre-initial-access {
+  color: var(--mitre-initial-access);
+  border-color: rgba(244, 114, 182, 0.3);
+}
+.mitre-pill.mitre-persistence {
+  color: var(--mitre-persistence);
+  border-color: rgba(192, 132, 252, 0.3);
+}
+.mitre-pill.mitre-priv-esc {
+  color: var(--mitre-priv-esc);
+  border-color: rgba(129, 140, 248, 0.3);
+}
+.mitre-pill.mitre-defense-evasion {
+  color: var(--mitre-defense-evasion);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.mitre-pill.mitre-cred-access {
+  color: var(--mitre-cred-access);
+  border-color: rgba(34, 211, 238, 0.3);
+}
+.mitre-pill.mitre-discovery {
+  color: var(--mitre-discovery);
+  border-color: rgba(45, 212, 191, 0.3);
+}
+.mitre-pill.mitre-lateral-movement {
+  color: var(--mitre-lateral-movement);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+.mitre-pill.mitre-collection {
+  color: var(--mitre-collection);
+  border-color: rgba(163, 230, 53, 0.3);
+}
+.mitre-pill.mitre-exfiltration {
+  color: var(--mitre-exfiltration);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+.mitre-pill.mitre-c2 {
+  color: var(--mitre-c2);
+  border-color: rgba(251, 146, 60, 0.3);
+}
+.mitre-pill.mitre-impact {
+  color: var(--mitre-impact);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+.mitre-pill.mitre-execution {
+  color: var(--mitre-execution);
+  border-color: rgba(232, 121, 249, 0.3);
+}
+
+/* Right section — status + arrow */
+.runbook-featured-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-left: 2rem;
+  flex-shrink: 0;
+}
+
+.runbook-featured-status {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.7rem;
+  border-radius: 100px;
+}
+
+.runbook-featured-status.status-complete {
+  color: var(--severity-info);
+  border: 1px solid var(--severity-info-border);
+  background: var(--severity-info-bg);
+}
+
+.runbook-featured-status.status-in-progress {
+  color: var(--severity-medium);
+  border: 1px solid var(--severity-medium-border);
+  background: var(--severity-medium-bg);
+}
+
+.runbook-featured-arrow {
+  font-size: 1.5rem;
+  color: var(--kql-text-faint);
+  transition: all 0.3s ease;
+}
+
+.runbook-featured-card:hover .runbook-featured-arrow {
+  color: var(--kql-accent);
+  transform: translateX(4px);
+}
+
+/* Responsive — stack on small screens */
+@media (max-width: 640px) {
+  .runbook-featured-card {
+    flex-direction: column;
+    padding: 1.2rem 1.4rem;
+  }
+
+  .runbook-featured-right {
+    flex-direction: row-reverse;
+    align-items: center;
+    padding-left: 0;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid rgba(228, 228, 228, 0.06);
+  }
+}
+
+/* ----- 10b. Gallery Cards (for gallery.md page) ----- */
+
+/* Grid Container */
 .runbook-gallery {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.25rem;
   margin: 1.5rem 0;
 }
 
-/* Card — capsule design with internal grid */
+/* Card */
 .runbook-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   background: rgba(22, 27, 34, 0.35);
   border: 1px solid rgba(228, 228, 228, 0.08);
-  border-radius: 10px;
+  border-radius: var(--kql-radius);
   padding: 1.3rem 1.4rem;
   text-decoration: none;
   color: inherit;
@@ -717,7 +968,6 @@ html {
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* Hover — lighten bg + accent glow */
 .runbook-card:hover {
   text-decoration: none;
   color: inherit;
@@ -738,7 +988,7 @@ html {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* Subtle top accent line on hover */
+/* Accent line on hover */
 .runbook-card::before {
   content: "";
   position: absolute;
@@ -753,7 +1003,6 @@ html {
   opacity: 1;
 }
 
-/* Zone 1: Header — title + ID */
 .runbook-card-header {
   display: flex;
   justify-content: space-between;
@@ -792,15 +1041,14 @@ html {
   padding-top: 0.15rem;
 }
 
-/* Zone 2: Description — middle zone */
 .runbook-card-description {
   font-size: 0.8rem;
   color: var(--kql-text-muted);
   line-height: 1.6;
   margin-bottom: 0;
+  flex: 1;
 }
 
-/* Zone 3: Footer — all meta badges */
 .runbook-card-footer {
   display: flex;
   flex-wrap: wrap;
@@ -815,14 +1063,12 @@ html {
   border-top-color: rgba(0, 0, 0, 0.06);
 }
 
-/* Ghost severity badges inside cards — border + text only */
 .runbook-card .severity-badge {
   background: transparent;
   font-size: 0.6rem;
   padding: 0.15rem 0.5rem;
 }
 
-/* Ghost MITRE tags inside cards */
 .runbook-card .mitre-tag {
   background: transparent !important;
   border: 1px solid;
@@ -845,7 +1091,6 @@ html {
 .runbook-card .mitre-collection { color: var(--mitre-collection); }
 .runbook-card .mitre-exfiltration { color: var(--mitre-exfiltration); }
 
-/* Ghost tier + status badges inside cards */
 .runbook-card .tier-badge {
   font-size: 0.55rem;
   padding: 0.1rem 0.4rem;
@@ -860,12 +1105,12 @@ html {
 }
 
 /* Planned card muted state */
-.runbook-card[style*="opacity"] {
-  opacity: 0.4 !important;
+.runbook-planned {
+  opacity: 0.4;
 }
 
-.runbook-card[style*="opacity"]:hover {
-  opacity: 0.6 !important;
+.runbook-planned:hover {
+  opacity: 0.65;
 }
 
 /* ----- 11. Gallery Filter Buttons ----- */

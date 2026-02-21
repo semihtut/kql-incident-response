@@ -114,30 +114,28 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
 ## Latest Runbooks
 
-<div class="runbook-gallery" markdown>
-
-<a class="runbook-card" href="runbooks/identity/unfamiliar-sign-in-properties/" markdown>
-<div class="runbook-card-header">
-  <span class="runbook-card-id">RB-0001</span>
-</div>
-
-### Unfamiliar Sign-In Properties
-
-<div class="runbook-card-description">
-Investigation runbook for Entra ID Identity Protection risk detection. Covers credential compromise, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.
-</div>
-
-<div class="runbook-card-footer">
-  <span class="severity-badge severity-medium">Medium</span>
-  <span class="mitre-tag mitre-initial-access">Initial Access</span>
-  <span class="mitre-tag mitre-persistence">Persistence</span>
-  <span class="mitre-tag mitre-cred-access">Cred Access</span>
-  <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
-  <span class="tier-badge">Tier 1</span>
-  <span class="status-badge status-complete">Complete</span>
-</div>
-</a>
-
+<div class="latest-runbooks">
+  <a class="runbook-featured-card" href="runbooks/identity/unfamiliar-sign-in-properties/">
+    <div class="runbook-featured-left">
+      <div class="runbook-featured-meta">
+        <span class="runbook-featured-id">RB-0001</span>
+        <span class="severity-badge severity-medium">Medium</span>
+        <span class="tier-badge">Tier 1</span>
+      </div>
+      <h3 class="runbook-featured-title">Unfamiliar Sign-In Properties</h3>
+      <p class="runbook-featured-desc">Investigation runbook for Entra ID Identity Protection risk detection. Covers credential compromise, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.</p>
+      <div class="runbook-featured-tags">
+        <span class="mitre-pill mitre-initial-access">Initial Access</span>
+        <span class="mitre-pill mitre-persistence">Persistence</span>
+        <span class="mitre-pill mitre-cred-access">Credential Access</span>
+        <span class="mitre-pill mitre-lateral-movement">Lateral Movement</span>
+      </div>
+    </div>
+    <div class="runbook-featured-right">
+      <span class="runbook-featured-status status-complete">Complete</span>
+      <span class="runbook-featured-arrow">&rarr;</span>
+    </div>
+  </a>
 </div>
 
 ---
