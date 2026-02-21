@@ -2,7 +2,7 @@
 
 Complete reference of all Microsoft Sentinel log tables used in the KQL Incident Response Playbooks. Each table includes its description, required license, data connector, and typical ingestion latency.
 
-This reference is auto-generated from [`sources/microsoft-sentinel-tables.json`](https://github.com/YOUR_ORG/KQL/blob/main/sources/microsoft-sentinel-tables.json).
+This reference is auto-generated from [`sources/microsoft-sentinel-tables.json`](https://github.com/leoparkkisaari/kql-incident-response/blob/main/sources/microsoft-sentinel-tables.json).
 
 ---
 

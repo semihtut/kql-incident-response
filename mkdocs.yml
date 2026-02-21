@@ -1,8 +1,8 @@
 site_name: KQL Incident Response Playbooks
 site_description: Structured, KQL-based incident response runbooks for the Microsoft cloud security ecosystem
-site_url: https://YOUR_ORG.github.io/KQL/
-repo_url: https://github.com/YOUR_ORG/KQL
-repo_name: YOUR_ORG/KQL
+site_url: https://leoparkkisaari.github.io/kql-incident-response/
+repo_url: https://github.com/leoparkkisaari/kql-incident-response
+repo_name: leoparkkisaari/kql-incident-response
 
 theme:
   name: material
