@@ -1,0 +1,2081 @@
+{
+  "entra_id": {
+    "tables": [
+      {
+        "name": "SigninLogs",
+        "description": "Interactive user sign-in events to Entra ID (Azure AD). Captures browser-based and native client authentications where the user actively provides credentials or completes MFA.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the sign-in event was logged (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user attempting sign-in (e.g., user@contoso.com)"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address of the sign-in attempt"
+          },
+          {
+            "name": "Location",
+            "type": "dynamic",
+            "description": "Geographic location of sign-in. Contains city, state, countryOrRegion, and geoCoordinates (latitude/longitude)"
+          },
+          {
+            "name": "ResultType",
+            "type": "string",
+            "description": "Sign-in result error code. 0 = success, 50126 = invalid credentials, 50074 = MFA required, 53003 = blocked by Conditional Access"
+          },
+          {
+            "name": "AppDisplayName",
+            "type": "string",
+            "description": "Display name of the application the user is signing into (e.g., Microsoft Office 365 Portal, Azure Portal)"
+          },
+          {
+            "name": "ConditionalAccessStatus",
+            "type": "string",
+            "description": "Result of Conditional Access policy evaluation. Values: success, failure, notApplied"
+          },
+          {
+            "name": "RiskLevelDuringSignIn",
+            "type": "string",
+            "description": "Risk level assessed by Identity Protection during sign-in. Values: none, low, medium, high, hidden"
+          }
+        ],
+        "license": "Entra ID Free (interactive sign-ins)",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-10 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/signinlogs"
+      },
+      {
+        "name": "AADNonInteractiveUserSignInLogs",
+        "description": "Non-interactive user sign-in events. Captures token refreshes, background authentication, SSO cookie-based sign-ins, and app-initiated authentication where the user does not actively provide credentials.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the sign-in event was logged (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user whose token is being refreshed or used"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address of the sign-in attempt"
+          },
+          {
+            "name": "Location",
+            "type": "dynamic",
+            "description": "Geographic location of sign-in. Contains city, state, countryOrRegion, and geoCoordinates"
+          },
+          {
+            "name": "ResultType",
+            "type": "string",
+            "description": "Sign-in result error code. 0 = success. Same error code schema as SigninLogs"
+          },
+          {
+            "name": "AppDisplayName",
+            "type": "string",
+            "description": "Display name of the application performing the non-interactive sign-in"
+          },
+          {
+            "name": "ResourceDisplayName",
+            "type": "string",
+            "description": "Display name of the resource (API/service) being accessed"
+          },
+          {
+            "name": "UserAgent",
+            "type": "string",
+            "description": "Browser or client user agent string. Useful for detecting anomalous clients or AiTM proxy tools"
+          }
+        ],
+        "license": "Entra ID P1 or P2",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-10 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadnoninteractiveusersigninlogs"
+      },
+      {
+        "name": "AADServicePrincipalSignInLogs",
+        "description": "Service principal (application) sign-in events. Captures authentication by app registrations and enterprise applications using client secrets, certificates, or federated credentials.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the service principal sign-in was logged (UTC)"
+          },
+          {
+            "name": "ServicePrincipalId",
+            "type": "string",
+            "description": "Object ID (GUID) of the service principal authenticating"
+          },
+          {
+            "name": "ServicePrincipalName",
+            "type": "string",
+            "description": "Display name of the service principal / application"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address of the service principal sign-in"
+          },
+          {
+            "name": "ResourceDisplayName",
+            "type": "string",
+            "description": "Display name of the target resource (API/service) the SP is accessing"
+          },
+          {
+            "name": "ResultType",
+            "type": "string",
+            "description": "Sign-in result error code. 0 = success"
+          },
+          {
+            "name": "ServicePrincipalCredentialKeyId",
+            "type": "string",
+            "description": "Key ID of the credential (secret or certificate) used for authentication. Useful for tracking which credential was compromised"
+          }
+        ],
+        "license": "Entra ID P1 or P2",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-10 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadserviceprincipalsigninlogs"
+      },
+      {
+        "name": "AADManagedIdentitySignInLogs",
+        "description": "Managed identity sign-in events. Captures authentication by system-assigned and user-assigned managed identities used by Azure resources (VMs, App Services, Functions, etc.).",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the managed identity sign-in was logged (UTC)"
+          },
+          {
+            "name": "ServicePrincipalId",
+            "type": "string",
+            "description": "Object ID of the managed identity"
+          },
+          {
+            "name": "ServicePrincipalName",
+            "type": "string",
+            "description": "Display name of the managed identity (typically the Azure resource name)"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address, typically an Azure internal IP"
+          },
+          {
+            "name": "ResourceDisplayName",
+            "type": "string",
+            "description": "Display name of the target resource being accessed by the managed identity"
+          },
+          {
+            "name": "ResultType",
+            "type": "string",
+            "description": "Sign-in result error code. 0 = success"
+          },
+          {
+            "name": "Location",
+            "type": "dynamic",
+            "description": "Geographic location derived from IP. For managed identities, this reflects the Azure region"
+          }
+        ],
+        "license": "Entra ID P1 or P2",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-10 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadmanagedidentitysigninlogs"
+      },
+      {
+        "name": "AuditLogs",
+        "description": "Entra ID directory audit logs. Captures all directory changes including user creation/deletion, group modifications, role assignments, app registrations, Conditional Access policy changes, and PIM activations (Category: RoleManagement).",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the audit event was logged (UTC)"
+          },
+          {
+            "name": "OperationName",
+            "type": "string",
+            "description": "Name of the directory operation performed (e.g., Add user, Add member to role, Update application, Add member to role completed (PIM activation))"
+          },
+          {
+            "name": "Category",
+            "type": "string",
+            "description": "Audit category. Values include: UserManagement, GroupManagement, RoleManagement (PIM), ApplicationManagement, Policy, DeviceManagement"
+          },
+          {
+            "name": "Result",
+            "type": "string",
+            "description": "Outcome of the operation. Values: success, failure"
+          },
+          {
+            "name": "InitiatedBy",
+            "type": "dynamic",
+            "description": "Who performed the action. Contains nested objects: .user (UserPrincipalName, Id) or .app (displayName, servicePrincipalId)"
+          },
+          {
+            "name": "TargetResources",
+            "type": "dynamic",
+            "description": "Array of resources affected by the operation. Each entry contains: displayName, type, userPrincipalName, modifiedProperties (with oldValue/newValue)"
+          },
+          {
+            "name": "AdditionalDetails",
+            "type": "dynamic",
+            "description": "Array of key-value pairs with additional context about the operation"
+          },
+          {
+            "name": "CorrelationId",
+            "type": "string",
+            "description": "GUID to correlate related audit events from the same operation"
+          }
+        ],
+        "license": "Entra ID Free (basic audit), Entra ID P2 for PIM audit events",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-15 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/auditlogs"
+      }
+    ]
+  },
+  "identity_protection": {
+    "tables": [
+      {
+        "name": "AADRiskyUsers",
+        "description": "Users flagged as risky by Entra ID Identity Protection. Contains the aggregated risk state for each user based on all detected risk events. Updated as risk events are detected or remediated.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the risky user record was last updated (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user flagged as risky"
+          },
+          {
+            "name": "UserDisplayName",
+            "type": "string",
+            "description": "Display name of the risky user"
+          },
+          {
+            "name": "RiskLevel",
+            "type": "string",
+            "description": "Aggregated risk level for the user. Values: none, low, medium, high, hidden"
+          },
+          {
+            "name": "RiskState",
+            "type": "string",
+            "description": "Current state of the user's risk. Values: atRisk, confirmedCompromised, remediated, dismissed, confirmedSafe"
+          },
+          {
+            "name": "RiskDetail",
+            "type": "string",
+            "description": "Detail about why the risk level was assigned. Values include: userPassedMFADrivenByRiskBasedPolicy, adminDismissedAllRiskForUser, aiConfirmedSigninSafe, adminConfirmedSigninCompromised"
+          },
+          {
+            "name": "Id",
+            "type": "string",
+            "description": "Object ID (GUID) of the risky user in Entra ID"
+          }
+        ],
+        "license": "Entra ID P2",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-10 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadriskyusers"
+      },
+      {
+        "name": "AADUserRiskEvents",
+        "description": "Individual risk detection events for users from Entra ID Identity Protection. Each row represents a single risk detection such as anonymous IP usage, impossible travel, leaked credentials, or malicious IP sign-in.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the risk event was detected (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user associated with the risk event"
+          },
+          {
+            "name": "RiskEventType",
+            "type": "string",
+            "description": "Type of risk detected. Values include: unfamiliarFeatures, anonymizedIPAddress, impossibleTravel, maliciousIPAddress, suspiciousBrowser, leakedCredentials, anomalousToken, mcasImpossibleTravel"
+          },
+          {
+            "name": "RiskLevel",
+            "type": "string",
+            "description": "Severity of this specific risk event. Values: low, medium, high, hidden"
+          },
+          {
+            "name": "RiskState",
+            "type": "string",
+            "description": "Current state of this risk event. Values: atRisk, confirmedCompromised, remediated, dismissed, confirmedSafe"
+          },
+          {
+            "name": "DetectionTimingType",
+            "type": "string",
+            "description": "When the risk was detected relative to the sign-in. Values: realtime, offline. Offline detections appear hours or days after the sign-in"
+          },
+          {
+            "name": "IpAddress",
+            "type": "string",
+            "description": "IP address associated with the risk event"
+          },
+          {
+            "name": "Location",
+            "type": "dynamic",
+            "description": "Geographic location of the risky activity. Contains city, state, countryOrRegion, geoCoordinates"
+          }
+        ],
+        "license": "Entra ID P2",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-30 minutes (realtime detections ~5 min, offline detections can be hours)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aaduserriskevents"
+      },
+      {
+        "name": "AADRiskyServicePrincipals",
+        "description": "Service principals (applications) flagged as risky by Entra ID Identity Protection. Tracks aggregated risk state for service principals based on anomalous credential usage or suspicious activity patterns.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the risky service principal record was last updated (UTC)"
+          },
+          {
+            "name": "ServicePrincipalId",
+            "type": "string",
+            "description": "Object ID (GUID) of the risky service principal"
+          },
+          {
+            "name": "DisplayName",
+            "type": "string",
+            "description": "Display name of the risky service principal / application"
+          },
+          {
+            "name": "RiskLevel",
+            "type": "string",
+            "description": "Aggregated risk level for the service principal. Values: none, low, medium, high, hidden"
+          },
+          {
+            "name": "RiskState",
+            "type": "string",
+            "description": "Current state of the service principal's risk. Values: atRisk, confirmedCompromised, remediated, dismissed, confirmedSafe"
+          },
+          {
+            "name": "RiskDetail",
+            "type": "string",
+            "description": "Detail about why the risk level was assigned"
+          }
+        ],
+        "license": "Entra ID P2 + Workload Identities Premium",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-15 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadriskyserviceprincipals"
+      },
+      {
+        "name": "AADServicePrincipalRiskEvents",
+        "description": "Individual risk detection events for service principals from Entra ID Identity Protection. Each row represents a single risk detection such as anomalous credential usage, suspicious application activity, or credential access from unusual infrastructure.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the risk event was detected (UTC)"
+          },
+          {
+            "name": "ServicePrincipalId",
+            "type": "string",
+            "description": "Object ID (GUID) of the service principal associated with the risk event"
+          },
+          {
+            "name": "RiskEventType",
+            "type": "string",
+            "description": "Type of risk detected for the service principal. Values include: anomalousServicePrincipalActivity, suspiciousSignins, adminConfirmedServicePrincipalCompromised"
+          },
+          {
+            "name": "RiskLevel",
+            "type": "string",
+            "description": "Severity of this specific risk event. Values: low, medium, high, hidden"
+          },
+          {
+            "name": "RiskState",
+            "type": "string",
+            "description": "Current state of this risk event. Values: atRisk, confirmedCompromised, remediated, dismissed, confirmedSafe"
+          },
+          {
+            "name": "DetectionTimingType",
+            "type": "string",
+            "description": "When the risk was detected. Values: realtime, offline"
+          },
+          {
+            "name": "IpAddress",
+            "type": "string",
+            "description": "IP address from which the risky activity originated"
+          }
+        ],
+        "license": "Entra ID P2 + Workload Identities Premium",
+        "connector": "Microsoft Entra ID (formerly Azure Active Directory)",
+        "ingestion_latency": "5-30 minutes (realtime ~5 min, offline can be hours)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadserviceprincipalriskevents"
+      }
+    ]
+  },
+  "defender_for_endpoint": {
+    "tables": [
+      {
+        "name": "DeviceEvents",
+        "description": "General endpoint activity events from Microsoft Defender for Endpoint. Captures miscellaneous device events including security-relevant actions like AMSI script inspection, exploit guard events, USB device connections, and PowerShell execution details.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the event was recorded (UTC). Maps to Timestamp in Advanced Hunting"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "Fully qualified domain name (FQDN) of the device"
+          },
+          {
+            "name": "DeviceId",
+            "type": "string",
+            "description": "Unique device identifier in Defender for Endpoint"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of event recorded. Values include: AntivirusDetection, ExploitGuardNetworkProtectionBlocked, PowerShellCommand, UsbDriveMounted, ServiceInstalled, ScheduledTaskCreated"
+          },
+          {
+            "name": "InitiatingProcessFileName",
+            "type": "string",
+            "description": "File name of the process that initiated the event"
+          },
+          {
+            "name": "InitiatingProcessCommandLine",
+            "type": "string",
+            "description": "Full command line of the initiating process. Critical for threat hunting and LOLBin detection"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "User account name under which the initiating process ran"
+          },
+          {
+            "name": "RemoteIP",
+            "type": "string",
+            "description": "Destination IP address for network-related events"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/deviceevents"
+      },
+      {
+        "name": "DeviceLogonEvents",
+        "description": "Endpoint logon and authentication events from Defender for Endpoint. Captures interactive, network, remote interactive, and service logon events on managed devices.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the logon event was recorded (UTC)"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "FQDN of the device where the logon occurred"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of logon activity. Values: LogonSuccess, LogonFailed, LogonAttempted"
+          },
+          {
+            "name": "LogonType",
+            "type": "string",
+            "description": "Type of logon session. Values: Interactive, Network, RemoteInteractive, Batch, Service, Unlock, CachedInteractive"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "User account name that performed the logon"
+          },
+          {
+            "name": "AccountDomain",
+            "type": "string",
+            "description": "Domain of the account (e.g., CONTOSO, AzureAD)"
+          },
+          {
+            "name": "RemoteIP",
+            "type": "string",
+            "description": "Source IP address for remote/network logons. Empty for local interactive logons"
+          },
+          {
+            "name": "IsLocalAdmin",
+            "type": "bool",
+            "description": "Whether the logged-on account has local administrator privileges on the device"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/devicelogonevents"
+      },
+      {
+        "name": "DeviceFileEvents",
+        "description": "File creation, modification, and deletion events from Defender for Endpoint. Captures file system activity on managed devices including file writes, renames, and hash information.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the file event was recorded (UTC)"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "FQDN of the device where the file event occurred"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of file activity. Values: FileCreated, FileModified, FileDeleted, FileRenamed"
+          },
+          {
+            "name": "FileName",
+            "type": "string",
+            "description": "Name of the file that was acted upon"
+          },
+          {
+            "name": "FolderPath",
+            "type": "string",
+            "description": "Full path to the folder containing the file"
+          },
+          {
+            "name": "SHA256",
+            "type": "string",
+            "description": "SHA-256 hash of the file. Used for IOC matching and file reputation lookups"
+          },
+          {
+            "name": "InitiatingProcessFileName",
+            "type": "string",
+            "description": "Name of the process that created/modified/deleted the file"
+          },
+          {
+            "name": "InitiatingProcessAccountName",
+            "type": "string",
+            "description": "User account under which the initiating process ran"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/devicefileevents"
+      },
+      {
+        "name": "DeviceProcessEvents",
+        "description": "Process creation and execution events from Defender for Endpoint. Captures detailed process execution telemetry including command lines, parent processes, and account context. Primary table for threat hunting and LOLBin detection.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the process event was recorded (UTC)"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "FQDN of the device where the process executed"
+          },
+          {
+            "name": "FileName",
+            "type": "string",
+            "description": "File name of the executed process (e.g., powershell.exe, cmd.exe)"
+          },
+          {
+            "name": "ProcessCommandLine",
+            "type": "string",
+            "description": "Full command line used to launch the process. Critical for detecting malicious arguments, encoded commands, and LOLBin abuse"
+          },
+          {
+            "name": "InitiatingProcessFileName",
+            "type": "string",
+            "description": "Parent process file name. Useful for detecting unusual parent-child process relationships"
+          },
+          {
+            "name": "InitiatingProcessCommandLine",
+            "type": "string",
+            "description": "Full command line of the parent process"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "User account under which the process ran"
+          },
+          {
+            "name": "SHA256",
+            "type": "string",
+            "description": "SHA-256 hash of the executed process binary"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/deviceprocessevents"
+      },
+      {
+        "name": "DeviceNetworkEvents",
+        "description": "Network connection events from Defender for Endpoint. Captures outbound TCP/UDP connections initiated by processes on managed devices. Essential for detecting C2 communication, data exfiltration, and lateral movement.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the network event was recorded (UTC)"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "FQDN of the device initiating the connection"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of network activity. Values: ConnectionSuccess, ConnectionFailed, ConnectionRequest, InboundConnectionAccepted"
+          },
+          {
+            "name": "RemoteIP",
+            "type": "string",
+            "description": "Destination IP address of the network connection"
+          },
+          {
+            "name": "RemotePort",
+            "type": "int",
+            "description": "Destination port number of the connection"
+          },
+          {
+            "name": "RemoteUrl",
+            "type": "string",
+            "description": "Full URL or hostname being connected to (when available)"
+          },
+          {
+            "name": "InitiatingProcessFileName",
+            "type": "string",
+            "description": "Process that initiated the network connection. Key for identifying suspicious outbound connections"
+          },
+          {
+            "name": "InitiatingProcessCommandLine",
+            "type": "string",
+            "description": "Full command line of the process making the connection"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/devicenetworkevents"
+      },
+      {
+        "name": "DeviceRegistryEvents",
+        "description": "Windows registry modification events from Defender for Endpoint. Captures creation, modification, and deletion of registry keys and values. Critical for detecting persistence mechanisms, security tool tampering, and malware configuration.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the registry event was recorded (UTC)"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "FQDN of the device where the registry change occurred"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of registry activity. Values: RegistryValueSet, RegistryKeyCreated, RegistryValueDeleted, RegistryKeyDeleted"
+          },
+          {
+            "name": "RegistryKey",
+            "type": "string",
+            "description": "Full registry key path (e.g., HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run)"
+          },
+          {
+            "name": "RegistryValueName",
+            "type": "string",
+            "description": "Name of the registry value that was set or modified"
+          },
+          {
+            "name": "RegistryValueData",
+            "type": "string",
+            "description": "Data content of the registry value. May contain file paths, commands, or configuration data"
+          },
+          {
+            "name": "RegistryValueType",
+            "type": "string",
+            "description": "Data type of the registry value. Values: String, ExpandString, Dword, Qword, Binary, MultiString"
+          },
+          {
+            "name": "InitiatingProcessFileName",
+            "type": "string",
+            "description": "Process that made the registry modification"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/deviceregistryevents"
+      },
+      {
+        "name": "DeviceImageLoadEvents",
+        "description": "DLL and image loading events from Defender for Endpoint. Captures when DLLs and other executable images are loaded into process memory. Used for detecting DLL injection, sideloading, and suspicious library usage.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the image load event was recorded (UTC)"
+          },
+          {
+            "name": "DeviceName",
+            "type": "string",
+            "description": "FQDN of the device where the DLL was loaded"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of image load event. Values: ImageLoaded"
+          },
+          {
+            "name": "FileName",
+            "type": "string",
+            "description": "File name of the loaded DLL or image"
+          },
+          {
+            "name": "FolderPath",
+            "type": "string",
+            "description": "Full path to the loaded DLL. Unusual paths (e.g., temp folders) may indicate injection"
+          },
+          {
+            "name": "SHA256",
+            "type": "string",
+            "description": "SHA-256 hash of the loaded image for IOC matching"
+          },
+          {
+            "name": "InitiatingProcessFileName",
+            "type": "string",
+            "description": "Process that loaded the DLL. Useful for detecting DLL sideloading"
+          },
+          {
+            "name": "InitiatingProcessCommandLine",
+            "type": "string",
+            "description": "Command line of the process that loaded the DLL"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/deviceimageloadevents"
+      },
+      {
+        "name": "AlertEvidence",
+        "description": "Evidence entities associated with alerts from Microsoft 365 Defender (Defender XDR). Each row links a piece of evidence (file, process, IP, user, mailbox) to a specific alert. Used to pivot from alerts to affected entities.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the evidence was recorded (UTC)"
+          },
+          {
+            "name": "AlertId",
+            "type": "string",
+            "description": "Unique identifier of the alert this evidence belongs to"
+          },
+          {
+            "name": "EntityType",
+            "type": "string",
+            "description": "Type of evidence entity. Values: Machine, User, Ip, Url, File, Process, Mailbox, MailMessage, MailCluster"
+          },
+          {
+            "name": "EvidenceRole",
+            "type": "string",
+            "description": "Role of the evidence in the alert context. Values: Impacted, Related, Attacker"
+          },
+          {
+            "name": "FileName",
+            "type": "string",
+            "description": "File name when EntityType is File"
+          },
+          {
+            "name": "SHA256",
+            "type": "string",
+            "description": "SHA-256 hash when EntityType is File"
+          },
+          {
+            "name": "RemoteIP",
+            "type": "string",
+            "description": "IP address when EntityType is Ip"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "User account name when EntityType is User"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2 (or any Microsoft 365 Defender workload)",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/alertevidence"
+      },
+      {
+        "name": "AlertInfo",
+        "description": "Alert metadata from all Microsoft 365 Defender workloads (Defender for Endpoint, Office 365, Identity, Cloud Apps). Each row represents a single alert with its title, severity, category, MITRE mapping, and detection source.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the alert was generated (UTC)"
+          },
+          {
+            "name": "AlertId",
+            "type": "string",
+            "description": "Unique identifier of the alert. Use to join with AlertEvidence"
+          },
+          {
+            "name": "Title",
+            "type": "string",
+            "description": "Display title of the alert (e.g., Suspicious PowerShell command line)"
+          },
+          {
+            "name": "Severity",
+            "type": "string",
+            "description": "Alert severity. Values: Informational, Low, Medium, High"
+          },
+          {
+            "name": "Category",
+            "type": "string",
+            "description": "MITRE ATT&CK tactic category. Values include: InitialAccess, Execution, Persistence, PrivilegeEscalation, DefenseEvasion, CredentialAccess, LateralMovement, Exfiltration"
+          },
+          {
+            "name": "ServiceSource",
+            "type": "string",
+            "description": "Defender product that generated the alert. Values: Microsoft Defender for Endpoint, Microsoft Defender for Office 365, Microsoft Defender for Identity, Microsoft Cloud App Security"
+          },
+          {
+            "name": "DetectionSource",
+            "type": "string",
+            "description": "Detection technology that triggered the alert. Values: EDR, AntiVirus, SmartScreen, CustomDetection, MTP (Microsoft Threat Protection)"
+          },
+          {
+            "name": "AttackTechniques",
+            "type": "dynamic",
+            "description": "Array of MITRE ATT&CK technique IDs associated with the alert (e.g., T1059.001, T1055)"
+          }
+        ],
+        "license": "Microsoft Defender for Endpoint P2 (or any Microsoft 365 Defender workload)",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-20 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/alertinfo"
+      }
+    ]
+  },
+  "defender_for_office365": {
+    "tables": [
+      {
+        "name": "EmailEvents",
+        "description": "Email message flow events from Microsoft Defender for Office 365. Each row represents a single email with delivery verdict, threat assessment, sender/recipient details, and authentication results. Primary table for phishing investigation and BEC detection.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the email event was recorded (UTC)"
+          },
+          {
+            "name": "SenderFromAddress",
+            "type": "string",
+            "description": "Sender email address from the FROM header (envelope sender). This is the address visible to the recipient"
+          },
+          {
+            "name": "RecipientEmailAddress",
+            "type": "string",
+            "description": "Email address of the recipient"
+          },
+          {
+            "name": "Subject",
+            "type": "string",
+            "description": "Subject line of the email message"
+          },
+          {
+            "name": "DeliveryAction",
+            "type": "string",
+            "description": "Final delivery action taken on the email. Values: Delivered, Junked, Blocked, Replaced, DeliveredAsSpam"
+          },
+          {
+            "name": "ThreatTypes",
+            "type": "string",
+            "description": "Threat verdict. Values include: Phish, Malware, Spam, empty string (clean). Multiple values possible comma-separated"
+          },
+          {
+            "name": "AuthenticationDetails",
+            "type": "string",
+            "description": "Email authentication results: SPF, DKIM, DMARC pass/fail status. Critical for detecting spoofed senders"
+          },
+          {
+            "name": "NetworkMessageId",
+            "type": "string",
+            "description": "Unique identifier for the email message. Use to correlate across EmailUrlInfo, EmailAttachmentInfo, and EmailPostDeliveryEvents"
+          }
+        ],
+        "license": "Microsoft Defender for Office 365 P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "10-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/emailevents"
+      },
+      {
+        "name": "EmailUrlInfo",
+        "description": "URLs extracted from email messages by Defender for Office 365. Each row represents a single URL found in an email body or attachment. Used for phishing URL analysis and click-tracking correlation.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the URL was extracted and recorded (UTC)"
+          },
+          {
+            "name": "NetworkMessageId",
+            "type": "string",
+            "description": "Unique email message identifier. Join with EmailEvents to get full email context"
+          },
+          {
+            "name": "Url",
+            "type": "string",
+            "description": "Full URL found in the email body or attachment"
+          },
+          {
+            "name": "UrlDomain",
+            "type": "string",
+            "description": "Domain portion of the URL. Useful for domain-based IOC matching and reputation checks"
+          },
+          {
+            "name": "UrlLocation",
+            "type": "string",
+            "description": "Where the URL was found in the email. Values: EmailBody, EmailSubject, Attachment"
+          }
+        ],
+        "license": "Microsoft Defender for Office 365 P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "10-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/emailurlinfo"
+      },
+      {
+        "name": "EmailAttachmentInfo",
+        "description": "Email attachment metadata from Defender for Office 365. Each row represents a single attachment with file details, hash values, and threat verdict. Used for malware delivery investigation and attachment-based IOC hunting.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the attachment info was recorded (UTC)"
+          },
+          {
+            "name": "NetworkMessageId",
+            "type": "string",
+            "description": "Unique email message identifier. Join with EmailEvents for full email context"
+          },
+          {
+            "name": "FileName",
+            "type": "string",
+            "description": "Name of the attached file (e.g., invoice.docx, update.exe)"
+          },
+          {
+            "name": "FileType",
+            "type": "string",
+            "description": "Detected file type based on content inspection, not just extension. Values include: docx, xlsx, pdf, exe, zip, html"
+          },
+          {
+            "name": "SHA256",
+            "type": "string",
+            "description": "SHA-256 hash of the attachment. Used for IOC matching across threat intelligence feeds"
+          },
+          {
+            "name": "ThreatTypes",
+            "type": "string",
+            "description": "Threat verdict for the attachment. Values: Malware, Phish, or empty (clean)"
+          },
+          {
+            "name": "RecipientEmailAddress",
+            "type": "string",
+            "description": "Email address of the recipient who received the attachment"
+          }
+        ],
+        "license": "Microsoft Defender for Office 365 P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "10-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/emailattachmentinfo"
+      },
+      {
+        "name": "EmailPostDeliveryEvents",
+        "description": "Post-delivery actions taken on email messages by Defender for Office 365. Captures Zero-hour Auto Purge (ZAP), admin actions, user-reported phishing, and manual remediation events that occur after initial delivery.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the post-delivery action was taken (UTC)"
+          },
+          {
+            "name": "NetworkMessageId",
+            "type": "string",
+            "description": "Unique email message identifier. Join with EmailEvents to see original delivery details"
+          },
+          {
+            "name": "RecipientEmailAddress",
+            "type": "string",
+            "description": "Email address of the recipient whose mailbox was affected"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Post-delivery action taken. Values: ZAP (Zero-hour Auto Purge), ManualRemediation, PhishZap, MalwareZap, SpamZap, UserReported"
+          },
+          {
+            "name": "ActionResult",
+            "type": "string",
+            "description": "Result of the post-delivery action. Values: Success, Failed, Pending"
+          },
+          {
+            "name": "DeliveryLocation",
+            "type": "string",
+            "description": "Where the message was moved to after action. Values: Quarantine, JunkFolder, DeletedItems, Inbox"
+          }
+        ],
+        "license": "Microsoft Defender for Office 365 P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "10-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/emailpostdeliveryevents"
+      },
+      {
+        "name": "UrlClickEvents",
+        "description": "SafeLinks URL click tracking events from Defender for Office 365. Each row represents a user clicking a URL that was wrapped by SafeLinks, with click verdict and user action details. Critical for measuring phishing campaign impact.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the URL click occurred (UTC)"
+          },
+          {
+            "name": "Url",
+            "type": "string",
+            "description": "Full URL that the user clicked on"
+          },
+          {
+            "name": "AccountUpn",
+            "type": "string",
+            "description": "UPN of the user who clicked the URL"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "SafeLinks verdict and action. Values: ClickAllowed, ClickBlocked, ClickBlockOverridden (user bypassed warning)"
+          },
+          {
+            "name": "NetworkMessageId",
+            "type": "string",
+            "description": "Email message identifier containing the clicked URL. Join with EmailEvents for email context"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address from which the user clicked the URL"
+          },
+          {
+            "name": "IsClickedThrough",
+            "type": "bool",
+            "description": "Whether the user clicked through a SafeLinks warning page to reach the destination URL"
+          }
+        ],
+        "license": "Microsoft Defender for Office 365 P2",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "10-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/urlclickevents"
+      }
+    ]
+  },
+  "defender_for_cloud_apps": {
+    "tables": [
+      {
+        "name": "CloudAppEvents",
+        "description": "SaaS application activity events from Microsoft Defender for Cloud Apps (formerly MCAS). Captures user and admin actions across connected cloud applications including file operations, sharing events, login activity, and administrative changes in apps like SharePoint Online, Exchange Online, Salesforce, Box, and Dropbox.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the cloud app event was recorded (UTC)"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of activity performed in the cloud app. Values vary by application (e.g., FileDownloaded, FileShared, MailItemsAccessed, Add-MailboxPermission, UserLoggedIn)"
+          },
+          {
+            "name": "Application",
+            "type": "string",
+            "description": "Name of the cloud application where the activity occurred (e.g., Microsoft SharePoint Online, Microsoft Exchange Online, Microsoft OneDrive for Business, Salesforce, Box)"
+          },
+          {
+            "name": "AccountDisplayName",
+            "type": "string",
+            "description": "Display name of the user or account that performed the action"
+          },
+          {
+            "name": "AccountObjectId",
+            "type": "string",
+            "description": "Entra ID object ID of the user account. Use to join with identity tables for enrichment"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address from which the cloud app activity was performed"
+          },
+          {
+            "name": "ActivityObjects",
+            "type": "dynamic",
+            "description": "Array of objects involved in the activity. Contains details about files, folders, users, or other entities affected by the action"
+          },
+          {
+            "name": "RawEventData",
+            "type": "dynamic",
+            "description": "Raw event data from the cloud application in JSON format. Contains application-specific fields not mapped to standard columns"
+          }
+        ],
+        "license": "Microsoft Defender for Cloud Apps (standalone or as part of Microsoft 365 E5)",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "15-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/cloudappevents"
+      },
+      {
+        "name": "McasShadowItReporting",
+        "description": "Shadow IT discovery data from Defender for Cloud Apps. Contains aggregated information about cloud application usage discovered through network log analysis (firewall/proxy logs). Used for identifying unsanctioned SaaS usage and data exposure risks.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp of the discovery report entry (UTC)"
+          },
+          {
+            "name": "AppName",
+            "type": "string",
+            "description": "Name of the discovered cloud application"
+          },
+          {
+            "name": "AppScore",
+            "type": "int",
+            "description": "Cloud App Security risk score (1-10). Higher scores indicate lower risk. Based on compliance, security factors, and legal assessment"
+          },
+          {
+            "name": "TotalUsers",
+            "type": "int",
+            "description": "Number of unique users who accessed the application in the reporting period"
+          },
+          {
+            "name": "TotalBytes",
+            "type": "long",
+            "description": "Total data volume (upload + download) transferred to/from the application in bytes"
+          },
+          {
+            "name": "StreamName",
+            "type": "string",
+            "description": "Name of the data source (firewall/proxy) that reported the traffic"
+          }
+        ],
+        "license": "Microsoft Defender for Cloud Apps (standalone or as part of Microsoft 365 E5)",
+        "connector": "Microsoft Defender for Cloud Apps",
+        "ingestion_latency": "30-60 minutes (aggregated reporting, not real-time)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/mcasshadowitreporting"
+      }
+    ]
+  },
+  "defender_for_identity": {
+    "tables": [
+      {
+        "name": "IdentityLogonEvents",
+        "description": "On-premises Active Directory authentication events from Microsoft Defender for Identity. Captures NTLM, Kerberos, and LDAP authentication activity detected by MDI sensors installed on domain controllers. Essential for detecting credential-based attacks, pass-the-hash, and lateral movement in hybrid environments.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the logon event was recorded (UTC)"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of authentication activity. Values: LogonSuccess, LogonFailed"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "SAM account name of the user or computer account authenticating"
+          },
+          {
+            "name": "AccountUpn",
+            "type": "string",
+            "description": "User principal name of the authenticating account (when available)"
+          },
+          {
+            "name": "LogonType",
+            "type": "string",
+            "description": "Type of authentication. Values: Interactive, Network, RemoteInteractive, Batch, Service, Unlock"
+          },
+          {
+            "name": "Protocol",
+            "type": "string",
+            "description": "Authentication protocol used. Values: Kerberos, NTLM, LDAP, Negotiate. Critical for detecting legacy protocol abuse"
+          },
+          {
+            "name": "DestinationDeviceName",
+            "type": "string",
+            "description": "Name of the device being authenticated to (target machine). Key for tracking lateral movement paths"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address of the authenticating client"
+          }
+        ],
+        "license": "Microsoft Defender for Identity",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-15 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/identitylogonevents"
+      },
+      {
+        "name": "IdentityDirectoryEvents",
+        "description": "Active Directory directory change events from Microsoft Defender for Identity. Captures modifications to AD objects including group membership changes, password resets, account modifications, GPO changes, and SID-History manipulation. Critical for detecting persistence and privilege escalation in on-premises AD.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the directory event was recorded (UTC)"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of directory change. Values include: Group Membership changed, Account Password changed, Potential lateral movement path identified, Security principal renamed, SID-History was added"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "SAM account name of the user who initiated the directory change"
+          },
+          {
+            "name": "AccountUpn",
+            "type": "string",
+            "description": "UPN of the user who initiated the change"
+          },
+          {
+            "name": "TargetAccountDisplayName",
+            "type": "string",
+            "description": "Display name of the target account/object that was modified"
+          },
+          {
+            "name": "DestinationDeviceName",
+            "type": "string",
+            "description": "Domain controller where the directory change was processed"
+          },
+          {
+            "name": "AdditionalFields",
+            "type": "dynamic",
+            "description": "JSON object with operation-specific details. Contains group names for membership changes, old/new values for modifications, and flags for sensitive operations"
+          }
+        ],
+        "license": "Microsoft Defender for Identity",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-15 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/identitydirectoryevents"
+      },
+      {
+        "name": "IdentityQueryEvents",
+        "description": "LDAP and DNS query events from Microsoft Defender for Identity. Captures directory queries made by users, applications, and processes against Active Directory. Used for detecting reconnaissance activity such as LDAP enumeration of privileged groups, user enumeration, and suspicious DNS queries.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the query event was recorded (UTC)"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of query activity. Values: LDAP query, DNS query, SAM-R query"
+          },
+          {
+            "name": "AccountName",
+            "type": "string",
+            "description": "SAM account name of the user or service account that performed the query"
+          },
+          {
+            "name": "AccountUpn",
+            "type": "string",
+            "description": "UPN of the account that performed the query"
+          },
+          {
+            "name": "QueryType",
+            "type": "string",
+            "description": "Type of LDAP/DNS query. For LDAP: filter string or query target. For DNS: record type (A, AAAA, MX, SRV)"
+          },
+          {
+            "name": "QueryTarget",
+            "type": "string",
+            "description": "Target of the query. For LDAP: distinguished name or filter. For DNS: queried domain name. Critical for detecting enumeration of sensitive groups like Domain Admins"
+          },
+          {
+            "name": "DestinationDeviceName",
+            "type": "string",
+            "description": "Domain controller or DNS server that processed the query"
+          },
+          {
+            "name": "IPAddress",
+            "type": "string",
+            "description": "Source IP address from which the query was made"
+          }
+        ],
+        "license": "Microsoft Defender for Identity",
+        "connector": "Microsoft 365 Defender (Microsoft Defender XDR)",
+        "ingestion_latency": "5-15 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/identityqueryevents"
+      }
+    ]
+  },
+  "office365_productivity": {
+    "tables": [
+      {
+        "name": "OfficeActivity",
+        "description": "Office 365 unified activity log capturing user and admin operations across Exchange Online, SharePoint Online, OneDrive for Business, Microsoft Teams, and Azure Active Directory. This is the broadest Office 365 activity table with diverse operations controlled by the OfficeWorkload column. Key OfficeWorkload values: Exchange (mailbox activity, inbox rules, mail flow), SharePoint (file access, sharing, site admin), OneDrive (file sync, sharing), MicrosoftTeams (meetings, messaging, app installs), AzureActiveDirectory (directory operations via O365 admin). Common Operations: FileAccessed, FileDownloaded, FileUploaded, FileSyncDownloadedFull, MailItemsAccessed, New-InboxRule, Set-Mailbox, Set-MailboxJunkEmailConfiguration, Add-MailboxPermission, AddedToGroup, MemberAdded, TeamsSessionStarted.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the Office 365 activity was recorded (UTC)"
+          },
+          {
+            "name": "Operation",
+            "type": "string",
+            "description": "Name of the operation performed. Values vary by workload: FileAccessed, FileDownloaded, FileUploaded (SharePoint/OneDrive), MailItemsAccessed, New-InboxRule, Set-Mailbox (Exchange), MemberAdded, TeamCreated (Teams)"
+          },
+          {
+            "name": "UserId",
+            "type": "string",
+            "description": "UPN of the user who performed the operation (e.g., user@contoso.com)"
+          },
+          {
+            "name": "ClientIP",
+            "type": "string",
+            "description": "Source IP address of the client. May include port number in format IP:Port or [IPv6]:Port"
+          },
+          {
+            "name": "OfficeWorkload",
+            "type": "string",
+            "description": "Office 365 service where the activity occurred. Values: Exchange, SharePoint, OneDrive, MicrosoftTeams, AzureActiveDirectory, PowerBI, SecurityComplianceCenter"
+          },
+          {
+            "name": "ResultStatus",
+            "type": "string",
+            "description": "Result of the operation. Values: Succeeded, Failed, PartiallySucceeded. Not populated for all operations"
+          },
+          {
+            "name": "OfficeObjectId",
+            "type": "string",
+            "description": "Identifier of the object acted upon. For SharePoint: full URL path of file. For Exchange: mailbox GUID or email subject. For Teams: team/channel identifier"
+          },
+          {
+            "name": "Parameters",
+            "type": "dynamic",
+            "description": "Additional parameters specific to the operation. For inbox rules: contains rule name, conditions, and actions. For mailbox settings: contains modified properties and values"
+          }
+        ],
+        "license": "Microsoft 365 E3 or higher (included with most M365 business plans)",
+        "connector": "Office 365",
+        "ingestion_latency": "15-60 minutes (Exchange typically faster at 15-30 min, SharePoint/OneDrive can take up to 60 min)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/officeactivity"
+      }
+    ]
+  },
+  "azure_infrastructure": {
+    "tables": [
+      {
+        "name": "AzureActivity",
+        "description": "Azure control plane (Azure Resource Manager) activity log. Captures all subscription-level management operations including resource creation/deletion, role assignments, policy changes, and service health events. Every Azure API call that modifies a resource appears here. Does NOT capture data plane operations (use AzureDiagnostics for those).",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the activity was recorded (UTC)"
+          },
+          {
+            "name": "OperationNameValue",
+            "type": "string",
+            "description": "Azure Resource Manager operation name in provider/resource/action format (e.g., Microsoft.Authorization/roleAssignments/write, Microsoft.Compute/virtualMachines/delete, Microsoft.KeyVault/vaults/write)"
+          },
+          {
+            "name": "Caller",
+            "type": "string",
+            "description": "Identity that performed the operation. UPN for users (user@contoso.com), object ID for service principals, or system for Azure-initiated operations"
+          },
+          {
+            "name": "CallerIpAddress",
+            "type": "string",
+            "description": "Source IP address of the caller. Empty for system-initiated operations"
+          },
+          {
+            "name": "CategoryValue",
+            "type": "string",
+            "description": "Category of the activity. Values: Administrative (resource changes), Security (Defender alerts), ServiceHealth, Alert, Recommendation, Policy, Autoscale, ResourceHealth"
+          },
+          {
+            "name": "ActivityStatusValue",
+            "type": "string",
+            "description": "Status of the operation. Values: Started, Succeeded, Failed, Accepted"
+          },
+          {
+            "name": "ResourceGroup",
+            "type": "string",
+            "description": "Name of the Azure resource group containing the affected resource"
+          },
+          {
+            "name": "ResourceProviderValue",
+            "type": "string",
+            "description": "Azure resource provider namespace (e.g., Microsoft.Compute, Microsoft.Storage, Microsoft.KeyVault, Microsoft.Authorization)"
+          }
+        ],
+        "license": "Free with Azure subscription (no additional cost)",
+        "connector": "Azure Activity",
+        "ingestion_latency": "15-30 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/azureactivity"
+      },
+      {
+        "name": "AzureDiagnostics",
+        "description": "Azure resource-level diagnostic logs. Captures data plane operations and detailed telemetry from individual Azure resources. Schema varies significantly by ResourceType. Key ResourceType variants for security: Key Vault (SecretGet, SecretList, SecretSet, KeyGet, CertificateGet operations), Storage (read/write/delete blob and file operations), SQL Database (query execution, login events, firewall blocks), Azure Firewall (network rule hits, application rule hits, threat intelligence matches). Each resource must have diagnostic settings configured to send logs to the Log Analytics workspace.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the diagnostic event was recorded (UTC)"
+          },
+          {
+            "name": "ResourceType",
+            "type": "string",
+            "description": "Type of Azure resource generating the log. Values include: VAULTS (Key Vault), STORAGEACCOUNTS (Storage), SERVERS/DATABASES (SQL), AZUREFIREWALLS (Firewall), NETWORKSECURITYGROUPS (NSG)"
+          },
+          {
+            "name": "OperationName",
+            "type": "string",
+            "description": "Resource-specific operation. Key Vault: SecretGet, SecretList, SecretSet, KeySign, CertificateGet, VaultGet. Storage: GetBlob, PutBlob, DeleteBlob, ListBlobs. SQL: SQLSecurityAuditEvent. Firewall: AzureFirewallNetworkRule, AzureFirewallApplicationRule"
+          },
+          {
+            "name": "CallerIPAddress",
+            "type": "string",
+            "description": "Source IP of the caller. Note: capital 'IP' differs from AzureActivity's CallerIpAddress (camelCase inconsistency across tables)"
+          },
+          {
+            "name": "ResultType",
+            "type": "string",
+            "description": "Result of the operation. Values vary by resource: Success, Failed, Unauthorized for Key Vault; 200, 403, 404 as HTTP status codes for Storage"
+          },
+          {
+            "name": "Resource",
+            "type": "string",
+            "description": "Name of the specific Azure resource (e.g., vault name, storage account name, SQL database name)"
+          },
+          {
+            "name": "Category",
+            "type": "string",
+            "description": "Diagnostic log category. Values: AuditEvent (Key Vault), StorageRead/StorageWrite/StorageDelete (Storage), SQLSecurityAuditEvents (SQL), AzureFirewallNetworkRule/AzureFirewallApplicationRule (Firewall)"
+          },
+          {
+            "name": "ResourceId",
+            "type": "string",
+            "description": "Full Azure resource ID in /subscriptions/.../resourceGroups/.../providers/... format. Use to correlate with AzureActivity for control plane context"
+          }
+        ],
+        "license": "Free (no additional cost for diagnostic logs themselves, but Log Analytics ingestion costs apply)",
+        "connector": "Azure Diagnostics (per-resource diagnostic settings must be configured)",
+        "ingestion_latency": "5-15 minutes (varies by resource type; Key Vault ~5 min, Storage ~10-15 min, Firewall ~5-10 min)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/azurediagnostics"
+      },
+      {
+        "name": "AzureMetrics",
+        "description": "Performance and health metrics from Azure resources. Captures numerical telemetry such as CPU utilization, memory usage, request counts, latency, and throughput. Primarily used for performance monitoring but valuable in security for detecting cryptomining (CPU spikes), DDoS (request volume anomalies), and resource abuse patterns.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp of the metric measurement (UTC)"
+          },
+          {
+            "name": "MetricName",
+            "type": "string",
+            "description": "Name of the metric. Values vary by resource: Percentage CPU, Network In Total, Transactions, ServiceApiLatency, SuccessE2ELatency, Availability"
+          },
+          {
+            "name": "Average",
+            "type": "double",
+            "description": "Average value of the metric during the time grain period"
+          },
+          {
+            "name": "Maximum",
+            "type": "double",
+            "description": "Maximum value of the metric during the time grain period. Useful for detecting burst patterns"
+          },
+          {
+            "name": "Total",
+            "type": "double",
+            "description": "Sum total of the metric during the time grain period"
+          },
+          {
+            "name": "ResourceId",
+            "type": "string",
+            "description": "Full Azure resource ID of the resource emitting the metric"
+          },
+          {
+            "name": "TimeGrain",
+            "type": "string",
+            "description": "Aggregation interval for the metric (e.g., PT1M for 1 minute, PT5M for 5 minutes, PT1H for 1 hour)"
+          }
+        ],
+        "license": "Free with Azure subscription (no additional cost for platform metrics)",
+        "connector": "Azure Diagnostics (metric export must be configured per resource)",
+        "ingestion_latency": "5-10 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/azuremetrics"
+      }
+    ]
+  },
+  "security_compliance": {
+    "tables": [
+      {
+        "name": "SecurityAlert",
+        "description": "Aggregated security alerts from all Microsoft security products ingested into Sentinel. Includes alerts from Defender for Endpoint, Defender for Office 365, Defender for Identity, Defender for Cloud Apps, Defender for Cloud, Entra ID Identity Protection, and third-party security solutions. This is the central alert table for cross-product correlation and incident investigation.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the alert was generated (UTC)"
+          },
+          {
+            "name": "AlertName",
+            "type": "string",
+            "description": "Name/title of the security alert (e.g., Unfamiliar sign-in properties, Suspicious PowerShell command line, Mass secret retrieval from Key Vault)"
+          },
+          {
+            "name": "AlertSeverity",
+            "type": "string",
+            "description": "Severity of the alert. Values: Informational, Low, Medium, High"
+          },
+          {
+            "name": "ProviderName",
+            "type": "string",
+            "description": "Security product that generated the alert. Values include: Azure Active Directory Identity Protection, Microsoft Cloud App Security, Azure Security Center (Defender for Cloud), Microsoft 365 Defender, Azure Sentinel"
+          },
+          {
+            "name": "Entities",
+            "type": "dynamic",
+            "description": "Array of entity objects associated with the alert. Each entity has a Type (Account, IP, Host, URL, File, Mailbox) and type-specific properties. Critical for pivoting from alerts to investigation"
+          },
+          {
+            "name": "Tactics",
+            "type": "dynamic",
+            "description": "Array of MITRE ATT&CK tactic names associated with the alert (e.g., InitialAccess, CredentialAccess, LateralMovement)"
+          },
+          {
+            "name": "Status",
+            "type": "string",
+            "description": "Alert status. Values: New, InProgress, Resolved, Dismissed, Unknown"
+          },
+          {
+            "name": "SystemAlertId",
+            "type": "string",
+            "description": "Unique identifier for the alert within Sentinel. Use to correlate with SecurityIncident via AlertIds field"
+          }
+        ],
+        "license": "Microsoft Sentinel (alerts from connected products require their respective licenses)",
+        "connector": "Varies by source product (auto-populated when product connectors are enabled)",
+        "ingestion_latency": "5-15 minutes (depends on source product; Identity Protection alerts may take longer for offline detections)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/securityalert"
+      },
+      {
+        "name": "SecurityIncident",
+        "description": "Microsoft Sentinel incidents created from correlated security alerts. Each incident groups one or more related alerts, tracks investigation status, assignment, and resolution. This is the primary table for SOC workflow management and incident metrics.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the incident was created or last updated (UTC)"
+          },
+          {
+            "name": "Title",
+            "type": "string",
+            "description": "Title of the Sentinel incident, typically derived from the primary alert"
+          },
+          {
+            "name": "Severity",
+            "type": "string",
+            "description": "Incident severity. Values: Informational, Low, Medium, High. Can be manually adjusted by analysts"
+          },
+          {
+            "name": "Status",
+            "type": "string",
+            "description": "Current incident status. Values: New, Active, Closed"
+          },
+          {
+            "name": "Owner",
+            "type": "dynamic",
+            "description": "Assigned owner of the incident. Contains: assignedTo (display name), email, userPrincipalName, objectId"
+          },
+          {
+            "name": "Tactics",
+            "type": "dynamic",
+            "description": "Array of MITRE ATT&CK tactics associated with the incident, aggregated from all linked alerts"
+          },
+          {
+            "name": "AlertIds",
+            "type": "dynamic",
+            "description": "Array of SystemAlertId values for all alerts grouped into this incident. Use to join with SecurityAlert table"
+          },
+          {
+            "name": "IncidentNumber",
+            "type": "int",
+            "description": "Sequential incident number within the Sentinel workspace. Human-readable identifier used in SOC communications"
+          }
+        ],
+        "license": "Microsoft Sentinel",
+        "connector": "Auto-populated by Sentinel analytics rules and alert grouping",
+        "ingestion_latency": "1-5 minutes (incidents are created by Sentinel itself)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/securityincident"
+      },
+      {
+        "name": "SecurityRecommendation",
+        "description": "Security posture recommendations from Microsoft Defender for Cloud. Each row represents a security recommendation with its current compliance state, affected resource, and remediation guidance. Used for tracking security hygiene and identifying misconfigurations that could enable attacks.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the recommendation state was last assessed (UTC)"
+          },
+          {
+            "name": "RecommendationName",
+            "type": "string",
+            "description": "Display name of the security recommendation (e.g., MFA should be enabled on accounts with owner permissions)"
+          },
+          {
+            "name": "RecommendationSeverity",
+            "type": "string",
+            "description": "Severity of the recommendation. Values: High, Medium, Low"
+          },
+          {
+            "name": "RecommendationState",
+            "type": "string",
+            "description": "Current state of the recommendation. Values: Active (unhealthy), Resolved (healthy), Dismissed, Not Applicable"
+          },
+          {
+            "name": "Description",
+            "type": "string",
+            "description": "Detailed description of the recommendation and why it matters for security"
+          },
+          {
+            "name": "RemediationDescription",
+            "type": "string",
+            "description": "Step-by-step remediation guidance to resolve the recommendation"
+          },
+          {
+            "name": "AssessedResourceId",
+            "type": "string",
+            "description": "Full Azure resource ID of the resource being assessed"
+          }
+        ],
+        "license": "Microsoft Defender for Cloud (Free tier provides basic recommendations, paid plans provide additional)",
+        "connector": "Microsoft Defender for Cloud",
+        "ingestion_latency": "30-60 minutes (assessment cycles run periodically, not real-time)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/securityrecommendation"
+      },
+      {
+        "name": "ThreatIntelligenceIndicator",
+        "description": "Threat intelligence indicators of compromise (IOCs) ingested into Microsoft Sentinel. Contains domain names, IP addresses, URLs, file hashes, and email addresses from configured TI feeds (Microsoft TI, TAXII feeds, custom uploads, Defender TI). Used for IOC matching against log data and proactive threat hunting.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the indicator was ingested into Sentinel (UTC)"
+          },
+          {
+            "name": "ThreatType",
+            "type": "string",
+            "description": "Classification of the threat. Values include: Malware, Phishing, Botnet, C2, MaliciousUrl, WatchList"
+          },
+          {
+            "name": "DomainName",
+            "type": "string",
+            "description": "Malicious domain name IOC. Populated when indicator type is domain"
+          },
+          {
+            "name": "NetworkIP",
+            "type": "string",
+            "description": "Malicious IP address IOC (IPv4 or IPv6). Populated when indicator type is IP"
+          },
+          {
+            "name": "Url",
+            "type": "string",
+            "description": "Malicious URL IOC. Populated when indicator type is URL"
+          },
+          {
+            "name": "FileHashValue",
+            "type": "string",
+            "description": "Malicious file hash IOC (MD5, SHA-1, or SHA-256). Populated when indicator type is file hash"
+          },
+          {
+            "name": "ExpirationDateTime",
+            "type": "datetime",
+            "description": "Date and time when the indicator expires and should no longer be used for matching. Always filter for active (non-expired) indicators"
+          },
+          {
+            "name": "ConfidenceScore",
+            "type": "int",
+            "description": "Confidence level of the indicator (0-100). Higher values indicate higher confidence that the indicator is truly malicious"
+          }
+        ],
+        "license": "Microsoft Sentinel (TI feed subscriptions may require additional licensing depending on source)",
+        "connector": "Threat Intelligence - TAXII, Threat Intelligence Platforms, Microsoft Defender Threat Intelligence",
+        "ingestion_latency": "5-15 minutes (depends on TI feed polling interval)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/threatintelligenceindicator"
+      }
+    ]
+  },
+  "ueba": {
+    "tables": [
+      {
+        "name": "BehaviorAnalytics",
+        "description": "ML-based user and entity behavior analytics from Microsoft Sentinel UEBA. Each row represents an anomalous activity detected by comparing an entity's current behavior against its historical baseline. Provides investigation priority scores and activity insights without requiring manual baseline queries. Must be enabled in Sentinel UEBA settings.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the anomalous behavior was detected (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user exhibiting anomalous behavior"
+          },
+          {
+            "name": "ActionType",
+            "type": "string",
+            "description": "Type of activity flagged as anomalous. Values include: FailedLogon, SuccessfulLogon, ResourceAccess, ElevateAccess, ActionPerformed"
+          },
+          {
+            "name": "ActivityInsights",
+            "type": "dynamic",
+            "description": "JSON object containing ML-generated insights about why the activity is anomalous. Includes fields like FirstTimeUserConnectedViaISP, ActivityUncommonlyPerformedByUser, UncommonHighVolumeOfOperations"
+          },
+          {
+            "name": "InvestigationPriority",
+            "type": "int",
+            "description": "ML-calculated investigation priority score (0-10). Higher scores indicate more anomalous behavior requiring investigation. Score >= 5 warrants review"
+          },
+          {
+            "name": "SourceIPAddress",
+            "type": "string",
+            "description": "IP address from which the anomalous activity was performed"
+          },
+          {
+            "name": "SourceDevice",
+            "type": "string",
+            "description": "Device from which the anomalous activity originated"
+          },
+          {
+            "name": "UsersInsights",
+            "type": "dynamic",
+            "description": "JSON object with user context including peer group information, account tags (sensitive, admin), and historical activity summary"
+          }
+        ],
+        "license": "Microsoft Sentinel with UEBA enabled",
+        "connector": "Auto-populated when Sentinel UEBA is enabled (Settings > Entity behavior > Enable UEBA)",
+        "ingestion_latency": "30-60 minutes (ML processing adds delay beyond source log ingestion)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/behavioranalytics"
+      },
+      {
+        "name": "UserAccessAnalytics",
+        "description": "User access pattern analytics from Microsoft Sentinel UEBA. Tracks which resources and applications each user accesses over time, calculates access anomaly scores, and identifies unusual resource access patterns. Used for detecting compromised accounts accessing resources outside their normal scope.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp of the access analytics record (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user whose access pattern is being analyzed"
+          },
+          {
+            "name": "SourceEntityId",
+            "type": "string",
+            "description": "Unique identifier of the user entity in Sentinel UEBA"
+          },
+          {
+            "name": "TargetEntityId",
+            "type": "string",
+            "description": "Unique identifier of the target resource or application being accessed"
+          },
+          {
+            "name": "AccessScore",
+            "type": "int",
+            "description": "Calculated score indicating how unusual the access pattern is for this user. Higher scores indicate more anomalous access"
+          },
+          {
+            "name": "AccessCount",
+            "type": "int",
+            "description": "Number of times the user accessed the target resource in the analysis period"
+          }
+        ],
+        "license": "Microsoft Sentinel with UEBA enabled",
+        "connector": "Auto-populated when Sentinel UEBA is enabled",
+        "ingestion_latency": "60-120 minutes (batch processing of access patterns)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/useraccessanalytics"
+      },
+      {
+        "name": "UserPeerAnalytics",
+        "description": "Peer group comparison analytics from Microsoft Sentinel UEBA. Groups users by similar roles, departments, and access patterns, then identifies deviations from peer group behavior. Used for detecting insider threats and compromised accounts that behave differently from colleagues with similar roles.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp of the peer analytics record (UTC)"
+          },
+          {
+            "name": "UserPrincipalName",
+            "type": "string",
+            "description": "UPN of the user being compared against their peer group"
+          },
+          {
+            "name": "PeerGroupId",
+            "type": "string",
+            "description": "Identifier of the ML-determined peer group the user belongs to"
+          },
+          {
+            "name": "PeerGroupRank",
+            "type": "int",
+            "description": "User's rank within their peer group based on activity anomaly. Lower rank = more typical behavior, higher rank = more anomalous"
+          },
+          {
+            "name": "PeerGroupSize",
+            "type": "int",
+            "description": "Total number of users in the peer group. Smaller groups may produce less reliable comparisons"
+          },
+          {
+            "name": "DeviationScore",
+            "type": "double",
+            "description": "Statistical deviation score from peer group norm. Higher values indicate greater behavioral deviation"
+          }
+        ],
+        "license": "Microsoft Sentinel with UEBA enabled",
+        "connector": "Auto-populated when Sentinel UEBA is enabled",
+        "ingestion_latency": "60-120 minutes (batch processing of peer group models)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/userpeeranalytics"
+      },
+      {
+        "name": "IdentityInfo",
+        "description": "User identity enrichment table from Microsoft Sentinel UEBA. Contains directory metadata for each user including job title, department, manager, group memberships, and account status. Updated periodically from Entra ID. Used as a lookup table to enrich investigation queries with organizational context.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the identity record was last synced from Entra ID (UTC)"
+          },
+          {
+            "name": "AccountUPN",
+            "type": "string",
+            "description": "User principal name of the identity"
+          },
+          {
+            "name": "AccountDisplayName",
+            "type": "string",
+            "description": "Display name of the user"
+          },
+          {
+            "name": "AccountObjectId",
+            "type": "string",
+            "description": "Entra ID object ID (GUID) of the user. Primary key for joining with sign-in and audit tables"
+          },
+          {
+            "name": "Department",
+            "type": "string",
+            "description": "Department of the user from Entra ID directory. Useful for scoping investigations and identifying sensitive departments"
+          },
+          {
+            "name": "JobTitle",
+            "type": "string",
+            "description": "Job title of the user. Helps identify executive-level targets or privileged role holders"
+          },
+          {
+            "name": "AssignedRoles",
+            "type": "dynamic",
+            "description": "Array of Entra ID directory roles assigned to the user (e.g., Global Administrator, Security Reader). Critical for identifying privileged accounts"
+          },
+          {
+            "name": "GroupMemberships",
+            "type": "dynamic",
+            "description": "Array of Entra ID group memberships. Useful for understanding access scope and blast radius of compromised accounts"
+          }
+        ],
+        "license": "Microsoft Sentinel with UEBA enabled",
+        "connector": "Auto-populated when Sentinel UEBA is enabled (syncs from Entra ID)",
+        "ingestion_latency": "Periodic sync (every 4-24 hours, not real-time)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/identityinfo"
+      }
+    ]
+  },
+  "third_party_okta": {
+    "tables": [
+      {
+        "name": "Okta_CL",
+        "description": "Okta system log events via the legacy custom log connector. Each row represents an Okta event (authentication, MFA challenge, admin action, policy evaluation). Column names follow the custom log _s (string), _d (double), _b (bool), _t (datetime) suffix convention because Okta data is ingested as a custom log. This is the most widely deployed Okta connector variant but has schema limitations compared to newer connectors.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the event was ingested into Sentinel (UTC). Note: use published_t for the actual Okta event timestamp"
+          },
+          {
+            "name": "eventType_s",
+            "type": "string",
+            "description": "Okta event type identifier. Values include: user.authentication.sso, user.session.start, user.session.end, user.mfa.factor.activate, user.mfa.factor.deactivate, user.account.lock, user.account.update_password, policy.evaluate_sign_on, application.lifecycle.update, system.org.rate_limit.violation, user.lifecycle.create, user.lifecycle.suspend"
+          },
+          {
+            "name": "actor_displayName_s",
+            "type": "string",
+            "description": "Display name of the actor (user or system) that performed the action"
+          },
+          {
+            "name": "actor_alternateId_s",
+            "type": "string",
+            "description": "Alternate identifier of the actor, typically the user's email address or username. Primary field for identifying users"
+          },
+          {
+            "name": "client_ipAddress_s",
+            "type": "string",
+            "description": "Source IP address of the client performing the action"
+          },
+          {
+            "name": "outcome_result_s",
+            "type": "string",
+            "description": "Result of the event. Values: SUCCESS, FAILURE, SKIPPED, DENY, ALLOW, ERROR"
+          },
+          {
+            "name": "target_s",
+            "type": "dynamic",
+            "description": "JSON array of target objects affected by the event. Each target contains displayName, alternateId, type (User, AppInstance, Group, Policy). Must be parsed with parse_json() and expanded with mv-expand for analysis"
+          },
+          {
+            "name": "debugContext_debugData_requestUri_s",
+            "type": "string",
+            "description": "API request URI for the event. Useful for identifying admin API abuse and automated attack tools"
+          }
+        ],
+        "license": "Okta tenant (any plan) + Sentinel custom log connector configured",
+        "connector": "Custom Logs via Azure Function (Okta API polling) or Logstash",
+        "ingestion_latency": "5-15 minutes (depends on Azure Function polling interval, typically 5 min)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/sentinel/data-connectors/okta-single-sign-on"
+      },
+      {
+        "name": "OktaSSO",
+        "description": "Okta Single Sign-On events via the native Sentinel connector (preview). Provides a cleaner, normalized schema compared to the legacy Okta_CL custom log. Column names follow standard naming conventions without the _s/_d suffixes. Recommended for new deployments but may have limited availability as a preview connector.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the event was recorded (UTC)"
+          },
+          {
+            "name": "EventType",
+            "type": "string",
+            "description": "Okta event type. Same values as Okta_CL eventType_s but with normalized column name"
+          },
+          {
+            "name": "ActorDisplayName",
+            "type": "string",
+            "description": "Display name of the user or system that performed the action"
+          },
+          {
+            "name": "ActorAlternateId",
+            "type": "string",
+            "description": "Alternate identifier (email/username) of the actor"
+          },
+          {
+            "name": "ClientIp",
+            "type": "string",
+            "description": "Source IP address of the client"
+          },
+          {
+            "name": "OutcomeResult",
+            "type": "string",
+            "description": "Result of the event. Values: SUCCESS, FAILURE, SKIPPED, DENY, ALLOW, ERROR"
+          },
+          {
+            "name": "Targets",
+            "type": "dynamic",
+            "description": "Array of target objects affected by the event with normalized structure"
+          }
+        ],
+        "license": "Okta tenant + Sentinel native Okta connector (preview)",
+        "connector": "Okta Single Sign-On (Preview) - native Sentinel data connector",
+        "ingestion_latency": "5-15 minutes",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/sentinel/data-connectors/okta-single-sign-on"
+      },
+      {
+        "name": "OktaV2_CL",
+        "description": "Okta system log events via the V2 custom log connector. Updated version of the legacy Okta_CL connector with improved schema handling and support for newer Okta System Log API v2 features. Still uses custom log _s/_d suffix naming convention but includes additional fields and better handling of nested JSON structures.",
+        "key_columns": [
+          {
+            "name": "TimeGenerated",
+            "type": "datetime",
+            "description": "Timestamp when the event was ingested into Sentinel (UTC)"
+          },
+          {
+            "name": "eventType_s",
+            "type": "string",
+            "description": "Okta event type identifier. Same event types as Okta_CL with additional V2 API events"
+          },
+          {
+            "name": "actor_displayName_s",
+            "type": "string",
+            "description": "Display name of the actor that performed the action"
+          },
+          {
+            "name": "actor_alternateId_s",
+            "type": "string",
+            "description": "Alternate identifier (email/username) of the actor"
+          },
+          {
+            "name": "client_ipAddress_s",
+            "type": "string",
+            "description": "Source IP address of the client"
+          },
+          {
+            "name": "outcome_result_s",
+            "type": "string",
+            "description": "Result of the event. Values: SUCCESS, FAILURE, SKIPPED, DENY, ALLOW, ERROR"
+          },
+          {
+            "name": "authenticationContext_externalSessionId_s",
+            "type": "string",
+            "description": "External session ID for the authentication context. Use to correlate multiple events within the same Okta session. Critical for session hijacking investigation"
+          },
+          {
+            "name": "securityContext_asOrg_s",
+            "type": "string",
+            "description": "Autonomous system organization of the client IP. Useful for identifying VPN, cloud provider, or suspicious ISP origins"
+          }
+        ],
+        "license": "Okta tenant (any plan) + Sentinel V2 custom log connector configured",
+        "connector": "Custom Logs V2 via Azure Function (Okta System Log API v2 polling)",
+        "ingestion_latency": "5-15 minutes (depends on Azure Function polling interval)",
+        "documentation_url": "https://learn.microsoft.com/en-us/azure/sentinel/data-connectors/okta-single-sign-on"
+      }
+    ]
+  }
+}

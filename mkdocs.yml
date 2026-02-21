@@ -1,0 +1,70 @@
+site_name: KQL Incident Response Playbooks
+site_description: Structured, KQL-based incident response runbooks for the Microsoft cloud security ecosystem
+site_url: https://YOUR_ORG.github.io/KQL/
+repo_url: https://github.com/YOUR_ORG/KQL
+repo_name: YOUR_ORG/KQL
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - awesome-pages
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Runbooks:
+      - Overview: runbooks/index.md
+      - Identity:
+          - runbooks/identity/index.md
+          - Unfamiliar Sign-In Properties: runbooks/identity/unfamiliar-sign-in-properties.md
+      - Endpoint: runbooks/endpoint/index.md
+      - Email: runbooks/email/index.md
+      - Cloud Apps: runbooks/cloud-apps/index.md
+      - Azure Infrastructure: runbooks/azure-infrastructure/index.md
+      - Okta: runbooks/okta/index.md
+  - Log Sources: log-sources.md
+  - MITRE Coverage: mitre-coverage.md
+  - Contributing: contributing.md
