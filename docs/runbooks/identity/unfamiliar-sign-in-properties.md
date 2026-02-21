@@ -174,11 +174,11 @@ tier: 1
         M --> O["Evidence\nCollection"]
         O --> P["Escalation\nif needed"]
 
-        style A fill:#F9A825,color:#000,stroke:#F57F17
-        style M fill:#D32F2F,color:#f0ecf5,stroke:#B71C1C
-        style O fill:#1976D2,color:#f0ecf5,stroke:#1565C0
-        style F fill:#388E3C,color:#f0ecf5,stroke:#2E7D32
-        style N fill:#FF8F00,color:#000,stroke:#E65100
+        style A fill:#ffd93d,color:#0d1117,stroke:#fbbf24
+        style M fill:#ff4757,color:#e6edf3,stroke:#dc2626
+        style O fill:#4fc3f7,color:#0d1117,stroke:#38bdf8
+        style F fill:#69db7c,color:#0d1117,stroke:#4ade80
+        style N fill:#ff8c42,color:#0d1117,stroke:#fb923c
     ```
 
 > **RB-0001** | Severity: Medium | Version: 1.0 | Last updated: 2026-02-21

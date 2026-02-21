@@ -24,7 +24,6 @@ function initGalleryFilters() {
       });
       btn.classList.add("active");
 
-      /* "all" resets the filter for that group */
       applyFilters();
     });
   });
@@ -39,7 +38,13 @@ function initGalleryFilters() {
     cards.forEach(function (card) {
       var matchSev = sevFilter === "all" || card.getAttribute("data-severity") === sevFilter;
       var matchTac = tacFilter === "all" || (card.getAttribute("data-tactics") || "").indexOf(tacFilter) !== -1;
-      card.style.display = matchSev && matchTac ? "" : "none";
+
+      if (matchSev && matchTac) {
+        card.style.display = "";
+        card.style.opacity = card.querySelector(".status-planned") ? "0.5" : "";
+      } else {
+        card.style.display = "none";
+      }
     });
   }
 }

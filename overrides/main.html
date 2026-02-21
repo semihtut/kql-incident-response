@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 
+{% block styles %}
+  <style>html{background:#0d1117}</style>
+  {{ super() }}
+{% endblock %}
+
 {% block announce %}
-  <strong>New:</strong> RB-0001 Unfamiliar Sign-In Properties runbook now available &mdash;
-  <a href="{{ 'runbooks/identity/unfamiliar-sign-in-properties/' | url }}">Read the runbook &rarr;</a>
+  <span style="display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;font-size:0.8rem;">
+    <span>
+      <code style="font-size:0.7rem;padding:0.15rem 0.4rem;border-radius:4px;background:rgba(122,162,247,0.12);color:#7aa2f7;border:1px solid rgba(122,162,247,0.2);">v1.0</code>
+      &nbsp;RB-0001 Unfamiliar Sign-In Properties &mdash;
+      <a href="{{ 'runbooks/identity/unfamiliar-sign-in-properties/' | url }}">Read the runbook &rarr;</a>
+    </span>
+    <a href="https://github.com/semihtut/kql-incident-response" style="display:inline-flex;align-items:center;gap:0.3rem;text-decoration:none;opacity:0.7;">
+      <img src="https://img.shields.io/github/stars/semihtut/kql-incident-response?style=flat&logo=github&logoColor=e6edf3&labelColor=0d1117&color=30363d" alt="GitHub stars" height="18" loading="lazy">
+    </a>
+  </span>
 {% endblock %}
