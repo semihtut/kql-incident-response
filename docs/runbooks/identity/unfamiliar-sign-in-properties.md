@@ -175,9 +175,9 @@ tier: 1
         O --> P["Escalation\nif needed"]
 
         style A fill:#F9A825,color:#000,stroke:#F57F17
-        style M fill:#D32F2F,color:#fff,stroke:#B71C1C
-        style O fill:#1976D2,color:#fff,stroke:#1565C0
-        style F fill:#388E3C,color:#fff,stroke:#2E7D32
+        style M fill:#D32F2F,color:#f0ecf5,stroke:#B71C1C
+        style O fill:#1976D2,color:#f0ecf5,stroke:#1565C0
+        style F fill:#388E3C,color:#f0ecf5,stroke:#2E7D32
         style N fill:#FF8F00,color:#000,stroke:#E65100
     ```
 
