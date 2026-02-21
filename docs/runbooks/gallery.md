@@ -27,7 +27,6 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
 
 <a class="runbook-card" href="../runbooks/identity/unfamiliar-sign-in-properties/" data-severity="medium" data-tactics="initial-access,persistence,priv-esc,defense-evasion,cred-access,lateral-movement,collection" markdown>
 <div class="runbook-card-header">
-  <span class="severity-badge severity-medium">Medium</span>
   <span class="runbook-card-id">RB-0001</span>
 </div>
 
@@ -37,25 +36,22 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
 Entra ID Identity Protection risk detection. Covers credential compromise via valid accounts, post-access persistence (inbox rules, MFA manipulation, OAuth consent), and blast radius assessment.
 </div>
 
-<div class="runbook-card-meta">
+<div class="runbook-card-footer">
+  <span class="severity-badge severity-medium">Medium</span>
   <span class="mitre-tag mitre-initial-access">Initial Access</span>
   <span class="mitre-tag mitre-persistence">Persistence</span>
   <span class="mitre-tag mitre-priv-esc">Priv Esc</span>
-  <span class="mitre-tag mitre-defense-evasion">Defense Evasion</span>
+  <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
   <span class="mitre-tag mitre-cred-access">Cred Access</span>
-  <span class="mitre-tag mitre-lateral-movement">Lateral Movement</span>
+  <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
   <span class="mitre-tag mitre-collection">Collection</span>
-</div>
-
-<div class="runbook-card-footer">
-  <span class="tier-badge">Tier 1 - Identity</span>
+  <span class="tier-badge">Tier 1</span>
   <span class="status-badge status-complete">Complete</span>
 </div>
 </a>
 
 <div class="runbook-card" data-severity="medium" data-tactics="initial-access,cred-access" style="opacity: 0.5;" markdown>
 <div class="runbook-card-header">
-  <span class="severity-badge severity-medium">Medium</span>
   <span class="runbook-card-id">RB-0002</span>
 </div>
 
@@ -65,20 +61,17 @@ Entra ID Identity Protection risk detection. Covers credential compromise via va
 Identity Protection risk detection for sign-ins from geographically distant locations within an impossible timeframe.
 </div>
 
-<div class="runbook-card-meta">
+<div class="runbook-card-footer">
+  <span class="severity-badge severity-medium">Medium</span>
   <span class="mitre-tag mitre-initial-access">Initial Access</span>
   <span class="mitre-tag mitre-cred-access">Cred Access</span>
-</div>
-
-<div class="runbook-card-footer">
-  <span class="tier-badge">Tier 1 - Identity</span>
+  <span class="tier-badge">Tier 1</span>
   <span class="status-badge status-planned">Planned</span>
 </div>
 </div>
 
 <div class="runbook-card" data-severity="high" data-tactics="initial-access,cred-access" style="opacity: 0.5;" markdown>
 <div class="runbook-card-header">
-  <span class="severity-badge severity-high">High</span>
   <span class="runbook-card-id">RB-0003</span>
 </div>
 
@@ -88,20 +81,17 @@ Identity Protection risk detection for sign-ins from geographically distant loca
 Detects MFA push notification bombing attacks where adversaries repeatedly trigger MFA prompts hoping the user approves.
 </div>
 
-<div class="runbook-card-meta">
+<div class="runbook-card-footer">
+  <span class="severity-badge severity-high">High</span>
   <span class="mitre-tag mitre-initial-access">Initial Access</span>
   <span class="mitre-tag mitre-cred-access">Cred Access</span>
-</div>
-
-<div class="runbook-card-footer">
-  <span class="tier-badge">Tier 1 - Identity</span>
+  <span class="tier-badge">Tier 1</span>
   <span class="status-badge status-planned">Planned</span>
 </div>
 </div>
 
 <div class="runbook-card" data-severity="high" data-tactics="cred-access,lateral-movement" style="opacity: 0.5;" markdown>
 <div class="runbook-card-header">
-  <span class="severity-badge severity-high">High</span>
   <span class="runbook-card-id">RB-0004</span>
 </div>
 
@@ -111,20 +101,17 @@ Detects MFA push notification bombing attacks where adversaries repeatedly trigg
 Detects distributed password spray attacks across multiple accounts using Identity Protection and SigninLogs analysis.
 </div>
 
-<div class="runbook-card-meta">
-  <span class="mitre-tag mitre-cred-access">Cred Access</span>
-  <span class="mitre-tag mitre-lateral-movement">Lateral Movement</span>
-</div>
-
 <div class="runbook-card-footer">
-  <span class="tier-badge">Tier 1 - Identity</span>
+  <span class="severity-badge severity-high">High</span>
+  <span class="mitre-tag mitre-cred-access">Cred Access</span>
+  <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
+  <span class="tier-badge">Tier 1</span>
   <span class="status-badge status-planned">Planned</span>
 </div>
 </div>
 
 <div class="runbook-card" data-severity="critical" data-tactics="cred-access,collection,exfiltration" style="opacity: 0.5;" markdown>
 <div class="runbook-card-header">
-  <span class="severity-badge severity-critical">Critical</span>
   <span class="runbook-card-id">RB-0005</span>
 </div>
 
@@ -134,14 +121,12 @@ Detects distributed password spray attacks across multiple accounts using Identi
 Detects mass enumeration and retrieval of secrets from Azure Key Vault, a common post-compromise activity for credential harvesting.
 </div>
 
-<div class="runbook-card-meta">
+<div class="runbook-card-footer">
+  <span class="severity-badge severity-critical">Critical</span>
   <span class="mitre-tag mitre-cred-access">Cred Access</span>
   <span class="mitre-tag mitre-collection">Collection</span>
   <span class="mitre-tag mitre-exfiltration">Exfiltration</span>
-</div>
-
-<div class="runbook-card-footer">
-  <span class="tier-badge">Tier 3 - Azure Infra</span>
+  <span class="tier-badge">Tier 3</span>
   <span class="status-badge status-planned">Planned</span>
 </div>
 </div>

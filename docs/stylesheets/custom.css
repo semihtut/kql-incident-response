@@ -687,96 +687,185 @@ html {
   border-color: transparent;
 }
 
-/* ----- 10. Runbook Gallery Cards (Glassmorphism) ----- */
+/* ----- 10. Runbook Gallery Cards (SOC Dashboard) ----- */
 
+/* Grid Container — fixed 3 columns */
 .runbook-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
   margin: 1.5rem 0;
 }
 
+/* Card — capsule design with internal grid */
 .runbook-card {
-  background: var(--kql-surface);
-  border: 1px solid var(--kql-border);
-  border-radius: var(--kql-radius-lg);
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: rgba(22, 27, 34, 0.35);
+  border: 1px solid rgba(228, 228, 228, 0.08);
+  border-radius: 10px;
+  padding: 1.3rem 1.4rem;
   text-decoration: none;
   color: inherit;
-}
-
-[data-md-color-scheme="slate"] .runbook-card {
-  background: rgba(22, 27, 34, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 [data-md-color-scheme="default"] .runbook-card {
-  background: #e8e6ed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+/* Hover — lighten bg + accent glow */
 .runbook-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--kql-border-hover);
   text-decoration: none;
   color: inherit;
+  transform: translateY(-3px);
 }
 
 [data-md-color-scheme="slate"] .runbook-card:hover {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px var(--kql-glow);
+  background: rgba(28, 35, 51, 0.55);
+  border-color: rgba(122, 162, 247, 0.18);
+  box-shadow:
+    0 0 24px rgba(122, 162, 247, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 [data-md-color-scheme="default"] .runbook-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(90, 106, 207, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
+/* Subtle top accent line on hover */
+.runbook-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--kql-accent), var(--kql-accent-alt));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.runbook-card:hover::before {
+  opacity: 1;
+}
+
+/* Zone 1: Header — title + ID */
 .runbook-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.8rem;
+  gap: 0.8rem;
+  margin-bottom: 0;
 }
 
 .runbook-card h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.02rem;
+  margin: 0 0 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
   line-height: 1.3;
+  color: var(--kql-text);
+  order: -1;
+}
+
+.runbook-card:hover h3 {
+  color: var(--kql-accent);
+}
+
+[data-md-color-scheme="default"] .runbook-card h3 {
+  color: var(--kql-text);
+}
+
+[data-md-color-scheme="default"] .runbook-card:hover h3 {
+  color: var(--md-primary-fg-color);
 }
 
 .runbook-card-id {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--kql-text-faint);
   font-family: var(--md-code-font, monospace);
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+  padding-top: 0.15rem;
 }
 
+/* Zone 2: Description — middle zone */
 .runbook-card-description {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--kql-text-muted);
-  line-height: 1.55;
-  margin-bottom: 1rem;
-  flex-grow: 1;
+  line-height: 1.6;
+  margin-bottom: 0;
 }
 
-.runbook-card-meta {
+/* Zone 3: Footer — all meta badges */
+.runbook-card-footer {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
-  margin-top: auto;
+  align-items: center;
+  padding-top: 0.9rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(228, 228, 228, 0.06);
 }
 
-.runbook-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--kql-border);
-  font-size: 0.8rem;
+[data-md-color-scheme="default"] .runbook-card-footer {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Ghost severity badges inside cards — border + text only */
+.runbook-card .severity-badge {
+  background: transparent;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.5rem;
+}
+
+/* Ghost MITRE tags inside cards */
+.runbook-card .mitre-tag {
+  background: transparent !important;
+  border: 1px solid;
+  font-size: 0.58rem;
+  padding: 0.12rem 0.45rem;
+  opacity: 0.7;
+}
+
+.runbook-card .mitre-tag:hover {
+  opacity: 1;
+  transform: none;
+}
+
+.runbook-card .mitre-initial-access { color: var(--mitre-initial-access); }
+.runbook-card .mitre-persistence { color: var(--mitre-persistence); }
+.runbook-card .mitre-priv-esc { color: var(--mitre-priv-esc); }
+.runbook-card .mitre-defense-evasion { color: var(--mitre-defense-evasion); }
+.runbook-card .mitre-cred-access { color: var(--mitre-cred-access); }
+.runbook-card .mitre-lateral-movement { color: var(--mitre-lateral-movement); }
+.runbook-card .mitre-collection { color: var(--mitre-collection); }
+.runbook-card .mitre-exfiltration { color: var(--mitre-exfiltration); }
+
+/* Ghost tier + status badges inside cards */
+.runbook-card .tier-badge {
+  font-size: 0.55rem;
+  padding: 0.1rem 0.4rem;
+  opacity: 0.5;
+}
+
+.runbook-card .status-badge {
+  background: transparent;
+  font-size: 0.55rem;
+  padding: 0.1rem 0.4rem;
+  margin-left: auto;
+}
+
+/* Planned card muted state */
+.runbook-card[style*="opacity"] {
+  opacity: 0.4 !important;
+}
+
+.runbook-card[style*="opacity"]:hover {
+  opacity: 0.6 !important;
 }
 
 /* ----- 11. Gallery Filter Buttons ----- */
@@ -1177,6 +1266,12 @@ html {
 
 /* ----- 22. Responsive ----- */
 
+@media (max-width: 1100px) {
+  .runbook-gallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .kql-hero {
     padding: 3rem 1.5rem;
@@ -1204,6 +1299,7 @@ html {
 
   .runbook-gallery {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .kql-features {

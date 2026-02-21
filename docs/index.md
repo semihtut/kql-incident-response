@@ -118,7 +118,6 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
 <a class="runbook-card" href="runbooks/identity/unfamiliar-sign-in-properties/" markdown>
 <div class="runbook-card-header">
-  <span class="severity-badge severity-medium">Medium</span>
   <span class="runbook-card-id">RB-0001</span>
 </div>
 
@@ -128,14 +127,12 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 Investigation runbook for Entra ID Identity Protection risk detection. Covers credential compromise, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.
 </div>
 
-<div class="runbook-card-meta">
+<div class="runbook-card-footer">
+  <span class="severity-badge severity-medium">Medium</span>
   <span class="mitre-tag mitre-initial-access">Initial Access</span>
   <span class="mitre-tag mitre-persistence">Persistence</span>
-  <span class="mitre-tag mitre-cred-access">Credential Access</span>
-  <span class="mitre-tag mitre-lateral-movement">Lateral Movement</span>
-</div>
-
-<div class="runbook-card-footer">
+  <span class="mitre-tag mitre-cred-access">Cred Access</span>
+  <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
   <span class="tier-badge">Tier 1</span>
   <span class="status-badge status-complete">Complete</span>
 </div>
