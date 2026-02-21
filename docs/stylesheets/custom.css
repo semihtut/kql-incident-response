@@ -1,0 +1,698 @@
+/* =====================================================
+   KQL Incident Response Playbooks - Custom Theme
+   Designed by Defne (UX/Content Designer)
+   Implemented by Emre (Web Architect)
+   ===================================================== */
+
+/* ----- 1. CSS Custom Properties (Color System) ----- */
+
+:root {
+  --kql-primary: #4A148C;
+  --kql-primary-light: #7C43BD;
+  --kql-accent: #00897B;
+  --kql-accent-light: #4DB6AC;
+
+  /* Severity */
+  --severity-critical: #D32F2F;
+  --severity-critical-bg: rgba(211, 47, 47, 0.1);
+  --severity-high: #F57C00;
+  --severity-high-bg: rgba(245, 124, 0, 0.1);
+  --severity-medium: #F9A825;
+  --severity-medium-bg: rgba(249, 168, 37, 0.1);
+  --severity-low: #1976D2;
+  --severity-low-bg: rgba(25, 118, 210, 0.1);
+  --severity-info: #388E3C;
+  --severity-info-bg: rgba(56, 142, 60, 0.1);
+
+  /* MITRE Tactics */
+  --mitre-initial-access: #E91E63;
+  --mitre-persistence: #7B1FA2;
+  --mitre-priv-esc: #3F51B5;
+  --mitre-defense-evasion: #0288D1;
+  --mitre-cred-access: #00838F;
+  --mitre-discovery: #00796B;
+  --mitre-lateral-movement: #2E7D32;
+  --mitre-collection: #9E9D24;
+  --mitre-exfiltration: #FF8F00;
+  --mitre-c2: #D84315;
+  --mitre-impact: #C62828;
+  --mitre-execution: #6A1B9A;
+  --mitre-recon: #4E342E;
+  --mitre-resource-dev: #455A64;
+
+  /* Layout */
+  --hero-bg: linear-gradient(135deg, #1a0533 0%, #4A148C 40%, #00695C 100%);
+  --hero-text: #ffffff;
+  --card-bg: #ffffff;
+  --card-border: #e0e0e0;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --card-shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.15);
+  --section-alt-bg: #f8f6fc;
+  --stat-number: #4A148C;
+  --badge-text: #ffffff;
+}
+
+/* Dark mode overrides */
+[data-md-color-scheme="slate"] {
+  --severity-critical: #EF5350;
+  --severity-critical-bg: rgba(239, 83, 80, 0.15);
+  --severity-high: #FFA726;
+  --severity-high-bg: rgba(255, 167, 38, 0.15);
+  --severity-medium: #FFEE58;
+  --severity-medium-bg: rgba(255, 238, 88, 0.12);
+  --severity-low: #42A5F5;
+  --severity-low-bg: rgba(66, 165, 245, 0.15);
+  --severity-info: #66BB6A;
+  --severity-info-bg: rgba(102, 187, 106, 0.15);
+
+  --hero-bg: linear-gradient(135deg, #0d001a 0%, #311B92 40%, #004D40 100%);
+  --card-bg: #1e1e2e;
+  --card-border: #3a3a4a;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --card-shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --section-alt-bg: #16161e;
+  --stat-number: #B39DDB;
+}
+
+/* ----- 2. Hero Section ----- */
+
+.kql-hero {
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  padding: 4rem 2rem;
+  text-align: center;
+  border-radius: 12px;
+  margin: -0.5rem -0.5rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.kql-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.kql-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.kql-hero .tagline {
+  font-size: 1.3rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+  font-weight: 300;
+}
+
+.kql-hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.kql-stat {
+  text-align: center;
+}
+
+.kql-stat .number {
+  display: block;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #B39DDB;
+}
+
+.kql-stat .label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+
+.kql-hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.kql-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.kql-btn-primary {
+  background: var(--kql-accent);
+  color: #fff;
+}
+
+.kql-btn-primary:hover {
+  background: #00796B;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 137, 123, 0.4);
+}
+
+.kql-btn-outline {
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
+  background: transparent;
+}
+
+.kql-btn-outline:hover {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ----- 3. Feature Cards ----- */
+
+.kql-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2.5rem 0;
+}
+
+.kql-feature-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 1.8rem;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kql-feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.kql-feature-card .icon {
+  font-size: 2rem;
+  margin-bottom: 0.8rem;
+  display: block;
+}
+
+.kql-feature-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.kql-feature-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+/* ----- 4. Quick Start Steps ----- */
+
+.kql-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.kql-step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.kql-step-number {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: var(--kql-primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+[data-md-color-scheme="slate"] .kql-step-number {
+  background: var(--kql-primary-light);
+}
+
+.kql-step-content h4 {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+}
+
+.kql-step-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+/* ----- 5. Severity Badges ----- */
+
+.severity-badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--badge-text);
+  vertical-align: middle;
+}
+
+.severity-critical { background: var(--severity-critical); }
+.severity-high { background: var(--severity-high); }
+.severity-medium { background: var(--severity-medium); color: #1a1a1a; }
+.severity-low { background: var(--severity-low); }
+.severity-info { background: var(--severity-info); }
+
+[data-md-color-scheme="slate"] .severity-medium { color: #1a1a1a; }
+
+/* ----- 6. MITRE Tactic Tags ----- */
+
+.mitre-tag {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0.15rem;
+  text-decoration: none;
+}
+
+.mitre-tag:hover { opacity: 0.85; color: #fff; }
+
+.mitre-initial-access { background: var(--mitre-initial-access); }
+.mitre-persistence { background: var(--mitre-persistence); }
+.mitre-priv-esc { background: var(--mitre-priv-esc); }
+.mitre-defense-evasion { background: var(--mitre-defense-evasion); }
+.mitre-cred-access { background: var(--mitre-cred-access); }
+.mitre-discovery { background: var(--mitre-discovery); }
+.mitre-lateral-movement { background: var(--mitre-lateral-movement); }
+.mitre-collection { background: var(--mitre-collection); }
+.mitre-exfiltration { background: var(--mitre-exfiltration); }
+.mitre-c2 { background: var(--mitre-c2); }
+.mitre-impact { background: var(--mitre-impact); }
+.mitre-execution { background: var(--mitre-execution); }
+.mitre-recon { background: var(--mitre-recon); }
+.mitre-resource-dev { background: var(--mitre-resource-dev); }
+
+/* ----- 7. Status Badges ----- */
+
+.status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-complete { background: var(--severity-info); color: #fff; }
+.status-in-progress { background: var(--severity-medium); color: #1a1a1a; }
+.status-planned { background: #9E9E9E; color: #fff; }
+
+/* Tier badges */
+.tier-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  border: 1px solid var(--card-border);
+  opacity: 0.8;
+}
+
+/* License badges */
+.license-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--kql-primary);
+  color: #fff;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+[data-md-color-scheme="slate"] .license-badge {
+  background: var(--kql-primary-light);
+}
+
+/* ----- 8. Runbook Gallery Cards ----- */
+
+.runbook-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.runbook-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.runbook-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover);
+  text-decoration: none;
+  color: inherit;
+}
+
+.runbook-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
+.runbook-card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.runbook-card-id {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  font-family: var(--md-code-font, monospace);
+}
+
+.runbook-card-description {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+}
+
+.runbook-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: auto;
+}
+
+.runbook-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--card-border);
+  font-size: 0.8rem;
+}
+
+/* Gallery filter buttons */
+.gallery-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.filter-btn {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+  background: var(--kql-primary);
+  color: #fff;
+  border-color: var(--kql-primary);
+}
+
+[data-md-color-scheme="slate"] .filter-btn:hover,
+[data-md-color-scheme="slate"] .filter-btn.active {
+  background: var(--kql-primary-light);
+  border-color: var(--kql-primary-light);
+}
+
+/* ----- 9. MITRE ATT&CK Matrix ----- */
+
+.mitre-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin: 2rem 0;
+}
+
+.mitre-column {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mitre-column-header {
+  padding: 0.6rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.mitre-technique {
+  display: block;
+  padding: 0.5rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  border-top: 1px solid var(--card-border);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.mitre-technique:hover {
+  text-decoration: none;
+}
+
+.mitre-technique-id {
+  font-family: var(--md-code-font, monospace);
+  font-size: 0.65rem;
+  opacity: 0.6;
+  display: block;
+}
+
+.mitre-covered {
+  background: rgba(56, 142, 60, 0.12);
+  border-left: 3px solid var(--severity-info);
+}
+
+.mitre-covered:hover { background: rgba(56, 142, 60, 0.2); }
+
+[data-md-color-scheme="slate"] .mitre-covered {
+  background: rgba(102, 187, 106, 0.1);
+}
+
+.mitre-partial {
+  background: rgba(249, 168, 37, 0.1);
+  border-left: 3px solid var(--severity-medium);
+}
+
+.mitre-gap {
+  background: transparent;
+  border-left: 3px solid transparent;
+  opacity: 0.5;
+}
+
+/* Coverage stats bar */
+.coverage-bar {
+  display: flex;
+  height: 24px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  background: var(--card-border);
+}
+
+.coverage-bar-fill {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.coverage-covered { background: var(--severity-info); }
+.coverage-partial { background: var(--severity-medium); }
+.coverage-gap { background: #9E9E9E; }
+
+/* ----- 10. Section Styling ----- */
+
+.section-alt {
+  background: var(--section-alt-bg);
+  padding: 2rem;
+  border-radius: 10px;
+  margin: 2rem 0;
+}
+
+/* ----- 11. Containment Warning Section ----- */
+
+.containment-section {
+  border: 2px solid var(--severity-critical);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--severity-critical-bg);
+}
+
+.containment-section h2,
+.containment-section h3 {
+  color: var(--severity-critical);
+}
+
+/* ----- 12. Investigation Flow Meta Bar ----- */
+
+.runbook-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  background: var(--section-alt-bg);
+  border-radius: 8px;
+  margin: 1rem 0 2rem;
+  border: 1px solid var(--card-border);
+}
+
+.runbook-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.runbook-meta-label {
+  font-weight: 600;
+  opacity: 0.7;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+/* ----- 13. Latest Runbooks Section ----- */
+
+.latest-runbooks {
+  margin: 2rem 0;
+}
+
+/* ----- 14. CTA Section ----- */
+
+.kql-cta {
+  text-align: center;
+  padding: 2.5rem 2rem;
+  background: var(--section-alt-bg);
+  border-radius: 10px;
+  margin: 2.5rem 0 1rem;
+  border: 1px solid var(--card-border);
+}
+
+.kql-cta h2 {
+  margin-bottom: 0.5rem;
+}
+
+.kql-cta p {
+  opacity: 0.75;
+  margin-bottom: 1.5rem;
+}
+
+.kql-cta .kql-btn-primary {
+  color: #fff;
+}
+
+.kql-cta .kql-btn-primary:hover {
+  color: #fff;
+}
+
+/* ----- 15. Mermaid Diagram Enhancements ----- */
+
+.mermaid {
+  margin: 1.5rem 0;
+}
+
+/* ----- 16. Responsive ----- */
+
+@media (max-width: 768px) {
+  .kql-hero {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .kql-hero h1 {
+    font-size: 1.8rem;
+  }
+
+  .kql-hero .tagline {
+    font-size: 1rem;
+  }
+
+  .kql-hero-stats {
+    gap: 1.2rem;
+  }
+
+  .kql-stat .number {
+    font-size: 1.6rem;
+  }
+
+  .mitre-matrix {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .runbook-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .kql-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----- 17. Print ----- */
+
+@media print {
+  .kql-hero { break-inside: avoid; }
+  .runbook-card { break-inside: avoid; }
+  .mitre-matrix { break-inside: avoid; }
+}

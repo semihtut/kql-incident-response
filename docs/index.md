@@ -1,62 +1,171 @@
-# KQL Incident Response Playbooks
-
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Runbooks](https://img.shields.io/badge/runbooks-1-green.svg)](#coverage)
-[![MITRE Techniques](https://img.shields.io/badge/MITRE_techniques-15-orange.svg)](mitre-coverage.md)
-[![Log Tables](https://img.shields.io/badge/log_tables-43-purple.svg)](log-sources.md)
-
-Structured, KQL-based incident response runbooks for the full Microsoft cloud security ecosystem. Each runbook is a complete investigation guide with step-by-step queries, explanations, MITRE ATT&CK mappings, and synthetic test data.
-
+---
+hide:
+  - toc
 ---
 
-## Key Features
+<div class="kql-hero" markdown>
 
-- **Step-by-step KQL queries** with explanations of what to look for and why
-- **MITRE ATT&CK mapping** for every runbook with tactic and technique IDs
-- **Baseline comparison queries** to distinguish anomalous activity from normal behavior
-- **Synthetic test data** using `datatable` for validation without production access
-- **Decision trees** that guide analysts through investigation branching logic
-- **Containment actions** with specific remediation commands and procedures
-- **Evidence collection** checklists for forensic preservation
+# KQL Incident Response Playbooks
+
+<p class="tagline">Cloud IR, powered by KQL</p>
+
+<div class="kql-hero-stats">
+  <div class="kql-stat">
+    <span class="number">1</span>
+    <span class="label">Runbooks</span>
+  </div>
+  <div class="kql-stat">
+    <span class="number">15</span>
+    <span class="label">MITRE Techniques</span>
+  </div>
+  <div class="kql-stat">
+    <span class="number">43</span>
+    <span class="label">Log Tables</span>
+  </div>
+  <div class="kql-stat">
+    <span class="number">7</span>
+    <span class="label">Tactics Covered</span>
+  </div>
+</div>
+
+<div class="kql-hero-actions">
+  <a href="runbooks/" class="kql-btn kql-btn-primary">Browse Runbooks</a>
+  <a href="getting-started/" class="kql-btn kql-btn-outline">Get Started</a>
+</div>
+
+</div>
+
+<div class="kql-features" markdown>
+
+<div class="kql-feature-card" markdown>
+
+<span class="icon">:material-book-open-page-variant:</span>
+
+### Structured Runbooks
+
+Step-by-step investigation guides with KQL queries, decision trees, and containment actions. Every runbook follows a consistent format so analysts know exactly where to look.
+
+</div>
+
+<div class="kql-feature-card" markdown>
+
+<span class="icon">:material-shield-check:</span>
+
+### MITRE ATT&CK Mapped
+
+Every runbook maps to MITRE ATT&CK tactics and techniques with confidence levels. Track your detection coverage across the full attack lifecycle.
+
+</div>
+
+<div class="kql-feature-card" markdown>
+
+<span class="icon">:material-test-tube:</span>
+
+### Battle-Tested KQL
+
+Production-grade queries validated with synthetic `datatable` tests. Every query includes baseline comparison to distinguish real threats from noise.
+
+</div>
+
+</div>
+
+---
 
 ## Quick Start
 
-**1. Find your alert**
+<div class="kql-steps" markdown>
 
-Browse the [Runbooks](runbooks/index.md) section or search for your alert name.
+<div class="kql-step" markdown>
+<div class="kql-step-number">1</div>
+<div class="kql-step-content" markdown>
 
-**2. Check prerequisites**
+#### Find your alert
 
-Each runbook lists required log sources, license tiers, and RBAC roles. See [Getting Started](getting-started.md) for details.
+Browse the [Runbook Gallery](runbooks/gallery.md) or search by alert name, MITRE tactic, or severity.
 
-**3. Run the queries**
+</div>
+</div>
 
-Copy KQL queries directly into Microsoft Sentinel Log Analytics and follow the investigation flow.
+<div class="kql-step" markdown>
+<div class="kql-step-number">2</div>
+<div class="kql-step-content" markdown>
+
+#### Check prerequisites
+
+Each runbook lists required log sources, license tiers, and RBAC roles needed.
+
+</div>
+</div>
+
+<div class="kql-step" markdown>
+<div class="kql-step-number">3</div>
+<div class="kql-step-content" markdown>
+
+#### Run the investigation
+
+Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
+
+</div>
+</div>
+
+</div>
 
 ---
 
-## Coverage {#coverage}
+## Latest Runbooks
+
+<div class="runbook-gallery" markdown>
+
+<a class="runbook-card" href="runbooks/identity/unfamiliar-sign-in-properties/" markdown>
+<div class="runbook-card-header">
+  <span class="severity-badge severity-medium">Medium</span>
+  <span class="runbook-card-id">RB-0001</span>
+</div>
+
+### Unfamiliar Sign-In Properties
+
+<div class="runbook-card-description">
+Investigation runbook for Entra ID Identity Protection risk detection. Covers credential compromise, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.
+</div>
+
+<div class="runbook-card-meta">
+  <span class="mitre-tag mitre-initial-access">Initial Access</span>
+  <span class="mitre-tag mitre-persistence">Persistence</span>
+  <span class="mitre-tag mitre-cred-access">Credential Access</span>
+  <span class="mitre-tag mitre-lateral-movement">Lateral Movement</span>
+</div>
+
+<div class="runbook-card-footer">
+  <span class="tier-badge">Tier 1</span>
+  <span class="status-badge status-complete">Complete</span>
+</div>
+</a>
+
+</div>
+
+---
+
+## Coverage
 
 | Category | Runbooks | Status |
 |----------|----------|--------|
-| [Identity](runbooks/identity/index.md) | 1 completed | Active |
+| [Identity](runbooks/identity/index.md) | 1 completed | :material-check-circle:{ .severity-info } Active |
 | [Endpoint](runbooks/endpoint/index.md) | Planned | Tier 2 |
 | [Email](runbooks/email/index.md) | Planned | Tier 2 |
 | [Cloud Apps](runbooks/cloud-apps/index.md) | Planned | Tier 2 |
 | [Azure Infrastructure](runbooks/azure-infrastructure/index.md) | Planned | Tier 3 |
 | [Okta](runbooks/okta/index.md) | Planned | Tier 2 |
 
-See [Log Sources](log-sources.md) for the full list of 43 supported Sentinel tables across 11 categories.
+See [Log Sources](log-sources.md) for the full reference of 43 supported Sentinel tables across 11 categories.
 
 ---
 
-## Team
+<div class="kql-cta" markdown>
 
-This project is built by a multi-disciplinary security team:
+## Contribute
 
-- **Leo** - Project Coordinator & Orchestrator
-- **Hasan** - Platform Architect (Microsoft ecosystem, table schemas, licensing)
-- **Samet** - KQL Engineer (query development, optimization, testing)
-- **Arina** - IR Architect (investigation flows, decision trees, runbook logic)
-- **Yunus** - Threat Intel Lead (MITRE ATT&CK mapping, TTP analysis)
-- **Alp** - QA Lead (documentation quality, synthetic data, validation)
+Help build the most comprehensive open-source KQL incident response library. We need security analysts, KQL engineers, and threat intel researchers.
+
+[Contributing Guide](contributing.md){ .kql-btn .kql-btn-primary }
+
+</div>

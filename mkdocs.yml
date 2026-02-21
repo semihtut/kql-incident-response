@@ -6,6 +6,7 @@ repo_name: leoparkkisaari/kql-incident-response
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     - scheme: default
       primary: deep purple
@@ -24,17 +25,28 @@ theme:
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.top
+    - navigation.indexes
     - toc.follow
     - search.suggest
     - search.highlight
     - content.code.copy
     - content.tabs.link
+    - content.code.annotate
   icon:
     repo: fontawesome/brands/github
 
 plugins:
   - search
   - awesome-pages
+  - glightbox
+  - minify:
+      minify_html: true
+
+extra_css:
+  - stylesheets/custom.css
+
+extra_javascript:
+  - javascripts/custom.js
 
 markdown_extensions:
   - admonition
@@ -45,18 +57,26 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.details
   - attr_list
   - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Runbooks:
       - Overview: runbooks/index.md
+      - Gallery: runbooks/gallery.md
       - Identity:
           - runbooks/identity/index.md
           - Unfamiliar Sign-In Properties: runbooks/identity/unfamiliar-sign-in-properties.md
