@@ -6,12 +6,9 @@ KQL-based incident response runbooks organized by Microsoft security product cat
 
 | Category | Description | Runbooks |
 |----------|-------------|----------|
-| [Identity](identity/index.md) | Entra ID, Identity Protection, Conditional Access | 1 |
-| [Endpoint](endpoint/index.md) | Defender for Endpoint, device-level threats | Coming soon |
-| [Email](email/index.md) | Defender for Office 365, phishing, BEC | Coming soon |
-| [Cloud Apps](cloud-apps/index.md) | Defender for Cloud Apps, SaaS threats | Coming soon |
-| [Azure Infrastructure](azure-infrastructure/index.md) | Azure control/data plane, Key Vault, Storage | Coming soon |
-| [Okta](okta/index.md) | Okta IdP via Sentinel connector | Coming soon |
+{% for slug in ['identity', 'endpoint', 'email', 'cloud-apps', 'azure-infrastructure', 'okta'] %}
+| [{{ categories[slug].name }}]({{ slug }}/index.md) | {{ category_descriptions[slug] }} | {{ categories[slug].count if categories[slug].count > 0 else 'Coming soon' }} |
+{% endfor %}
 
 ## How Runbooks Are Structured
 
@@ -28,4 +25,6 @@ Every runbook follows a consistent format:
 
 | ID | Alert Name | Category | Severity | MITRE Tactics |
 |----|-----------|----------|----------|---------------|
-| RB-0001 | [Unfamiliar Sign-In Properties](identity/unfamiliar-sign-in-properties.md) | Identity | Medium | Initial Access, Persistence, Privilege Escalation, Defense Evasion, Credential Access, Lateral Movement, Collection |
+{% for rb in runbooks %}
+| {{ rb.id }} | [{{ rb.title }}]({{ rb.category_slug }}/{{ rb.file_stem }}.md) | {{ rb.category_name }} | {{ rb.severity | capitalize }} | {{ rb.tactic_names | join(', ') }} |
+{% endfor %}

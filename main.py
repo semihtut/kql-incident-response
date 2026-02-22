@@ -1,0 +1,248 @@
+"""
+mkdocs-macros-plugin hook for auto-generating runbook indexes and gallery cards.
+
+Scans docs/runbooks/*/*.md for YAML frontmatter and registers template variables
+so that index pages, gallery cards, and homepage stats are generated automatically.
+"""
+
+import yaml
+from pathlib import Path
+
+DOCS_DIR = Path("docs")
+RUNBOOKS_DIR = DOCS_DIR / "runbooks"
+
+CATEGORY_MAP = {
+    "identity": "Identity",
+    "endpoint": "Endpoint",
+    "email": "Email",
+    "cloud-apps": "Cloud Apps",
+    "azure-infrastructure": "Azure Infrastructure",
+    "okta": "Okta",
+}
+
+CATEGORY_DESCRIPTIONS = {
+    "identity": "Entra ID, Identity Protection, Conditional Access",
+    "endpoint": "Defender for Endpoint, device-level threats",
+    "email": "Defender for Office 365, phishing, BEC",
+    "cloud-apps": "Defender for Cloud Apps, SaaS threats",
+    "azure-infrastructure": "Azure control/data plane, Key Vault, Storage",
+    "okta": "Okta IdP via Sentinel connector",
+}
+
+TACTIC_SLUG_MAP = {
+    "Initial Access": "initial-access",
+    "Persistence": "persistence",
+    "Privilege Escalation": "priv-esc",
+    "Defense Evasion": "defense-evasion",
+    "Credential Access": "cred-access",
+    "Lateral Movement": "lateral-movement",
+    "Collection": "collection",
+    "Reconnaissance": "recon",
+    "Exfiltration": "exfiltration",
+    "Command and Control": "c2",
+    "Impact": "impact",
+    "Execution": "execution",
+    "Discovery": "discovery",
+    "Resource Development": "resource-dev",
+}
+
+TACTIC_SHORT_MAP = {
+    "initial-access": "Initial Access",
+    "persistence": "Persistence",
+    "priv-esc": "Priv Esc",
+    "defense-evasion": "Def Evasion",
+    "cred-access": "Cred Access",
+    "lateral-movement": "Lateral Mov",
+    "collection": "Collection",
+    "recon": "Recon",
+    "exfiltration": "Exfiltration",
+    "c2": "C2",
+    "impact": "Impact",
+    "execution": "Execution",
+    "discovery": "Discovery",
+    "resource-dev": "Resource Dev",
+}
+
+SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+
+def extract_frontmatter(path):
+    """Parse YAML frontmatter from a markdown file."""
+    content = path.read_text(encoding="utf-8")
+    if not content.startswith("---"):
+        return None
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return None
+    try:
+        return yaml.safe_load(parts[1])
+    except yaml.YAMLError:
+        return None
+
+
+def scan_runbooks():
+    """Scan docs/runbooks/*/ for .md files with valid frontmatter."""
+    runbooks = []
+    for category_dir in sorted(RUNBOOKS_DIR.iterdir()):
+        if not category_dir.is_dir():
+            continue
+        category_slug = category_dir.name
+        if category_slug not in CATEGORY_MAP:
+            continue
+        for md_file in sorted(category_dir.glob("*.md")):
+            if md_file.name == "index.md":
+                continue
+            meta = extract_frontmatter(md_file)
+            if not meta or "id" not in meta:
+                continue
+
+            meta["category_slug"] = category_slug
+            meta["category_name"] = CATEGORY_MAP[category_slug]
+            meta["file_stem"] = md_file.stem
+
+            # Compute tactic slugs for data-attributes and CSS classes
+            tactic_slugs = []
+            for tactic in meta.get("mitre_attack", {}).get("tactics", []):
+                slug = TACTIC_SLUG_MAP.get(tactic.get("tactic_name", ""), "")
+                if slug:
+                    tactic_slugs.append(slug)
+            meta["tactic_slugs"] = tactic_slugs
+
+            # Tactic names for table display
+            meta["tactic_names"] = [
+                t.get("tactic_name", "")
+                for t in meta.get("mitre_attack", {}).get("tactics", [])
+            ]
+
+            # Display status
+            if meta.get("status") == "reviewed":
+                meta["display_status"] = "Complete"
+                meta["status_class"] = "status-complete"
+            else:
+                meta["display_status"] = meta.get("status", "draft").title()
+                meta["status_class"] = f"status-{meta.get('status', 'draft')}"
+
+            # Required log source table names
+            meta["key_log_sources"] = [
+                ls["table"]
+                for ls in meta.get("log_sources", [])
+                if ls.get("required")
+            ]
+
+            runbooks.append(meta)
+
+    runbooks.sort(key=lambda r: r["id"])
+    return runbooks
+
+
+def load_planned_runbooks(published_ids):
+    """Load planned runbooks from YAML data file, skipping already-published IDs."""
+    data_file = DOCS_DIR / "_data" / "planned_runbooks.yml"
+    if not data_file.exists():
+        return []
+    try:
+        with open(data_file, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError:
+        return []
+
+    planned = []
+    for entry in data or []:
+        if entry.get("id") in published_ids:
+            continue
+        entry["status"] = "planned"
+        entry["display_status"] = "Planned"
+        entry["status_class"] = "status-planned"
+        entry["category_name"] = CATEGORY_MAP.get(
+            entry.get("category", ""), entry.get("category", "")
+        )
+        tactic_slugs = []
+        for tactic_name in entry.get("tactics", []):
+            slug = TACTIC_SLUG_MAP.get(tactic_name, "")
+            if slug:
+                tactic_slugs.append(slug)
+        entry["tactic_slugs"] = tactic_slugs
+        planned.append(entry)
+    return planned
+
+
+def compute_categories(runbooks):
+    """Group published runbooks by category with counts."""
+    cats = {}
+    for rb in runbooks:
+        slug = rb["category_slug"]
+        if slug not in cats:
+            cats[slug] = {
+                "slug": slug,
+                "name": CATEGORY_MAP[slug],
+                "count": 0,
+                "runbooks": [],
+            }
+        cats[slug]["count"] += 1
+        cats[slug]["runbooks"].append(rb)
+
+    # Add empty categories so templates can iterate all
+    for slug, name in CATEGORY_MAP.items():
+        if slug not in cats:
+            cats[slug] = {"slug": slug, "name": name, "count": 0, "runbooks": []}
+    return cats
+
+
+def define_env(env):
+    """Called by mkdocs-macros-plugin at build time."""
+    runbooks = scan_runbooks()
+    published_ids = {rb["id"] for rb in runbooks}
+    planned = load_planned_runbooks(published_ids)
+
+    all_runbooks = sorted(runbooks + planned, key=lambda r: r["id"])
+    categories = compute_categories(runbooks)
+
+    # Distinct tactics across all runbooks (published + planned)
+    all_tactics = []
+    seen_tactics = set()
+    for rb in all_runbooks:
+        for slug in rb.get("tactic_slugs", []):
+            if slug not in seen_tactics:
+                seen_tactics.add(slug)
+                all_tactics.append(slug)
+
+    # Distinct severities in display order
+    all_severities = sorted(
+        {rb.get("severity", "") for rb in all_runbooks if rb.get("severity")},
+        key=lambda s: SEVERITY_ORDER.get(s, 99),
+    )
+
+    # Stats for homepage
+    unique_techniques = set()
+    unique_tactics = set()
+    for rb in runbooks:
+        for t in rb.get("mitre_attack", {}).get("techniques", []):
+            unique_techniques.add(t.get("technique_id", ""))
+        for t in rb.get("mitre_attack", {}).get("tactics", []):
+            unique_tactics.add(t.get("tactic_id", ""))
+
+    # Count total platform-supported log tables from log-sources.md
+    log_sources_file = DOCS_DIR / "log-sources.md"
+    table_count = 0
+    if log_sources_file.exists():
+        for line in log_sources_file.read_text(encoding="utf-8").splitlines():
+            if line.startswith("| [") and "learn.microsoft.com" in line:
+                table_count += 1
+    if table_count == 0:
+        table_count = 43  # fallback
+
+    env.variables["runbooks"] = runbooks
+    env.variables["planned_runbooks"] = planned
+    env.variables["all_runbooks"] = all_runbooks
+    env.variables["categories"] = categories
+    env.variables["category_descriptions"] = CATEGORY_DESCRIPTIONS
+    env.variables["all_tactics"] = all_tactics
+    env.variables["all_severities"] = all_severities
+    env.variables["tactic_short"] = TACTIC_SHORT_MAP
+    env.variables["tactic_slug_map"] = TACTIC_SLUG_MAP
+    env.variables["stats"] = {
+        "runbook_count": len(runbooks),
+        "technique_count": len(unique_techniques),
+        "tactic_count": len(unique_tactics),
+        "table_count": table_count,
+    }

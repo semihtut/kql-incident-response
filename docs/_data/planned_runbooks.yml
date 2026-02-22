@@ -1,0 +1,37 @@
+# Planned runbooks - entries are auto-superseded when a .md file with the same ID exists
+- id: RB-0005
+  title: "MFA Fatigue Attack"
+  severity: high
+  tier: 1
+  category: identity
+  description: >
+    Detects MFA push notification bombing attacks where adversaries repeatedly
+    trigger MFA prompts hoping the user approves.
+  tactics:
+    - "Initial Access"
+    - "Credential Access"
+
+- id: RB-0006
+  title: "Password Spray Detection"
+  severity: high
+  tier: 1
+  category: identity
+  description: >
+    Detects distributed password spray attacks across multiple accounts using
+    Identity Protection and SigninLogs analysis.
+  tactics:
+    - "Credential Access"
+    - "Lateral Movement"
+
+- id: RB-0007
+  title: "Mass Secret Retrieval from Key Vault"
+  severity: critical
+  tier: 3
+  category: azure-infrastructure
+  description: >
+    Detects mass enumeration and retrieval of secrets from Azure Key Vault,
+    a common post-compromise activity for credential harvesting.
+  tactics:
+    - "Credential Access"
+    - "Collection"
+    - "Exfiltration"

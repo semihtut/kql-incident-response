@@ -62,6 +62,37 @@ When a user provides an alert name (e.g., "Unfamiliar sign-in properties", "Mass
 
 The IR Architect must maintain an internal mapping of all known Microsoft security alert names to their products, log sources, and investigation requirements. The Platform Architect must validate that the correct tables are referenced. The Threat Intel Lead must provide immediate MITRE mapping.
 
+## Auto-Generation System (mkdocs-macros-plugin)
+This project uses `mkdocs-macros-plugin` with a Python hook (`main.py`) to auto-generate index pages, gallery cards, and homepage stats from runbook frontmatter. This eliminates manual updates when adding new runbooks.
+
+### How It Works
+- `main.py` at project root defines `define_env()` which scans `docs/runbooks/*/` directories at build time
+- It parses YAML frontmatter from each runbook `.md` file and registers Jinja2 template variables
+- Pages use `{{ variable }}` and `{% for %}` syntax instead of hardcoded content
+
+### Adding a New Runbook (Only 2 Steps)
+1. Create the `.md` file in the correct category directory (e.g., `docs/runbooks/identity/new-alert.md`) with proper frontmatter
+2. Add the page to `mkdocs.yml` nav section
+
+Everything else is automatic:
+- **Homepage** (`docs/index.md`): Stats (runbook count, MITRE techniques, log tables, tactics) and "Latest Runbooks" cards update automatically
+- **Runbook Overview** (`docs/runbooks/index.md`): Categories table counts and Runbook Index table update automatically
+- **Gallery** (`docs/runbooks/gallery.md`): Cards and filter buttons (severity/tactic) update automatically
+- **Category Index** (e.g., `docs/runbooks/identity/index.md`): Published Runbooks table updates automatically
+
+### Planned Runbooks
+Runbooks not yet written are defined in `docs/_data/planned_runbooks.yml`. When a `.md` file with the same `id` is created, the planned entry is automatically superseded.
+
+### Key Files
+- `main.py` - mkdocs-macros hook with `define_env()`, `scan_runbooks()`, `load_planned_runbooks()`
+- `docs/_data/planned_runbooks.yml` - Planned runbook definitions
+- Template variables available in Jinja2: `runbooks`, `planned_runbooks`, `all_runbooks`, `categories`, `stats`, `all_tactics`, `all_severities`, `tactic_short`
+
+### Important: Jinja2 in Markdown
+- Pages that use auto-generation contain `{{ }}` and `{% %}` Jinja2 syntax
+- KQL queries in runbook content use `}}` (from JSON in `dynamic()`) but NOT `{{`, so there is no conflict
+- Do NOT add `{{ }}` patterns outside of code blocks in runbook content pages
+
 ## File Naming Convention
 - Runbooks: kebab-case (e.g., mass-secret-retrieval.md)
 - Queries: numbered prefix (e.g., 01-detect-mass-access.kql)

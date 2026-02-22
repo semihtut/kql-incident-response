@@ -44,6 +44,7 @@ theme:
 plugins:
   - search
   - awesome-pages
+  - macros
   - glightbox
   - minify:
       minify_html: true
@@ -90,6 +91,8 @@ nav:
           - Unfamiliar Sign-In Properties: runbooks/identity/unfamiliar-sign-in-properties.md
           - Impossible Travel Activity: runbooks/identity/impossible-travel-activity.md
           - Leaked Credentials: runbooks/identity/leaked-credentials.md
+          - Anonymous IP Address Sign-In: runbooks/identity/anonymous-ip-address.md
+          - MFA Fatigue Attack: runbooks/identity/mfa-fatigue-attack.md
       - Endpoint: runbooks/endpoint/index.md
       - Email: runbooks/email/index.md
       - Cloud Apps: runbooks/cloud-apps/index.md

@@ -11,19 +11,19 @@ hide:
 
 <div class="kql-hero-stats">
   <div class="kql-stat">
-    <span class="number">3</span>
+    <span class="number">{{ stats.runbook_count }}</span>
     <span class="label">Runbooks</span>
   </div>
   <div class="kql-stat">
-    <span class="number">17</span>
+    <span class="number">{{ stats.technique_count }}</span>
     <span class="label">MITRE Techniques</span>
   </div>
   <div class="kql-stat">
-    <span class="number">43</span>
+    <span class="number">{{ stats.table_count }}</span>
     <span class="label">Log Tables</span>
   </div>
   <div class="kql-stat">
-    <span class="number">8</span>
+    <span class="number">{{ stats.tactic_count }}</span>
     <span class="label">Tactics Covered</span>
   </div>
 </div>
@@ -115,42 +115,27 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 ## Latest Runbooks
 
 <div class="latest-runbooks">
-  <a class="runbook-card" href="runbooks/identity/leaked-credentials/">
+{% for rb in runbooks | sort(attribute='id', reverse=true) %}
+{% if loop.index <= 2 %}
+  <a class="runbook-card" href="runbooks/{{ rb.category_slug }}/{{ rb.file_stem }}/">
     <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0003</span>
-      <span class="severity-badge severity-high">High</span>
+      <span class="runbook-card-id">{{ rb.id }}</span>
+      <span class="severity-badge severity-{{ rb.severity }}">{{ rb.severity | capitalize }}</span>
     </div>
-    <h3>Leaked Credentials</h3>
+    <h3>{{ rb.title }}</h3>
     <div class="runbook-card-description">
-      Entra ID Identity Protection offline detection for credentials found in dark web dumps and info-stealer logs. Covers password timeline, credential stuffing detection, legacy auth exposure, and blast radius assessment.
+      {{ rb.description | trim | truncate(200) }}
     </div>
     <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-recon">Recon</span>
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-persistence">Persistence</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-complete">Complete</span>
+{% for slug in rb.tactic_slugs[:5] %}
+      <span class="mitre-tag mitre-{{ slug }}">{{ tactic_short[slug] }}</span>
+{% endfor %}
+      <span class="tier-badge">Tier {{ rb.tier }}</span>
+      <span class="status-badge {{ rb.status_class }}">{{ rb.display_status }}</span>
     </div>
   </a>
-  <a class="runbook-card" href="runbooks/identity/impossible-travel-activity/">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0002</span>
-      <span class="severity-badge severity-medium">Medium</span>
-    </div>
-    <h3>Impossible Travel Activity</h3>
-    <div class="runbook-card-description">
-      Entra ID Identity Protection risk detection for geographically impossible sign-in pairs. Covers VPN false positive triage, token replay detection (T1550.004), and blast radius assessment.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-persistence">Persistence</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-complete">Complete</span>
-    </div>
-  </a>
+{% endif %}
+{% endfor %}
 </div>
 
 ---
@@ -159,14 +144,15 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
 | Category | Runbooks | Status |
 |----------|----------|--------|
-| [Identity](runbooks/identity/index.md) | 3 completed | :material-check-circle:{ .severity-info } Active |
-| [Endpoint](runbooks/endpoint/index.md) | Planned | Tier 2 |
-| [Email](runbooks/email/index.md) | Planned | Tier 2 |
-| [Cloud Apps](runbooks/cloud-apps/index.md) | Planned | Tier 2 |
-| [Azure Infrastructure](runbooks/azure-infrastructure/index.md) | Planned | Tier 3 |
-| [Okta](runbooks/okta/index.md) | Planned | Tier 2 |
+{% for slug in ['identity', 'endpoint', 'email', 'cloud-apps', 'azure-infrastructure', 'okta'] %}
+{% if categories[slug].count > 0 %}
+| [{{ categories[slug].name }}](runbooks/{{ slug }}/index.md) | {{ categories[slug].count }} completed | :material-check-circle:{ .severity-info } Active |
+{% else %}
+| [{{ categories[slug].name }}](runbooks/{{ slug }}/index.md) | Planned | Tier 2 |
+{% endif %}
+{% endfor %}
 
-See [Log Sources](log-sources.md) for the full reference of 43 supported Sentinel tables across 11 categories.
+See [Log Sources](log-sources.md) for the full reference of supported Sentinel tables.
 
 ---
 

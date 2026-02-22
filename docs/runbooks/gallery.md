@@ -5,141 +5,47 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
 <div class="gallery-filters">
   <strong style="line-height: 2;">Severity:</strong>
   <button class="filter-btn active" data-group="severity" data-filter="all">All</button>
-  <button class="filter-btn" data-group="severity" data-filter="critical">Critical</button>
-  <button class="filter-btn" data-group="severity" data-filter="high">High</button>
-  <button class="filter-btn" data-group="severity" data-filter="medium">Medium</button>
-  <button class="filter-btn" data-group="severity" data-filter="low">Low</button>
+{% for sev in all_severities %}
+  <button class="filter-btn" data-group="severity" data-filter="{{ sev }}">{{ sev | capitalize }}</button>
+{% endfor %}
 </div>
 
 <div class="gallery-filters">
   <strong style="line-height: 2;">Tactic:</strong>
   <button class="filter-btn active" data-group="tactic" data-filter="all">All</button>
-  <button class="filter-btn" data-group="tactic" data-filter="initial-access">Initial Access</button>
-  <button class="filter-btn" data-group="tactic" data-filter="persistence">Persistence</button>
-  <button class="filter-btn" data-group="tactic" data-filter="priv-esc">Privilege Escalation</button>
-  <button class="filter-btn" data-group="tactic" data-filter="defense-evasion">Defense Evasion</button>
-  <button class="filter-btn" data-group="tactic" data-filter="cred-access">Credential Access</button>
-  <button class="filter-btn" data-group="tactic" data-filter="lateral-movement">Lateral Movement</button>
-  <button class="filter-btn" data-group="tactic" data-filter="collection">Collection</button>
+{% for slug in all_tactics %}
+  <button class="filter-btn" data-group="tactic" data-filter="{{ slug }}">{{ tactic_short[slug] }}</button>
+{% endfor %}
 </div>
 
 <div class="runbook-gallery">
 
-  <a class="runbook-card" href="../runbooks/identity/unfamiliar-sign-in-properties/" data-severity="medium" data-tactics="initial-access,persistence,priv-esc,defense-evasion,cred-access,lateral-movement,collection">
+{% for rb in all_runbooks %}
+{% if rb.status == 'planned' %}
+  <div class="runbook-card runbook-planned" data-severity="{{ rb.severity }}" data-tactics="{{ rb.tactic_slugs | join(',') }}">
+{% else %}
+  <a class="runbook-card" href="../{{ rb.category_slug }}/{{ rb.file_stem }}/" data-severity="{{ rb.severity }}" data-tactics="{{ rb.tactic_slugs | join(',') }}">
+{% endif %}
     <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0001</span>
-      <span class="severity-badge severity-medium">Medium</span>
+      <span class="runbook-card-id">{{ rb.id }}</span>
+      <span class="severity-badge severity-{{ rb.severity }}">{{ rb.severity | capitalize }}</span>
     </div>
-    <h3>Unfamiliar Sign-In Properties</h3>
+    <h3>{{ rb.title }}</h3>
     <div class="runbook-card-description">
-      Entra ID Identity Protection risk detection. Covers credential compromise via valid accounts, post-access persistence (inbox rules, MFA manipulation, OAuth consent), and blast radius assessment.
+      {{ rb.description | trim }}
     </div>
     <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-persistence">Persistence</span>
-      <span class="mitre-tag mitre-priv-esc">Priv Esc</span>
-      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
-      <span class="mitre-tag mitre-collection">Collection</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-complete">Complete</span>
+{% for slug in rb.tactic_slugs %}
+      <span class="mitre-tag mitre-{{ slug }}">{{ tactic_short[slug] }}</span>
+{% endfor %}
+      <span class="tier-badge">Tier {{ rb.tier }}</span>
+      <span class="status-badge {{ rb.status_class }}">{{ rb.display_status }}</span>
     </div>
-  </a>
-
-  <a class="runbook-card" href="../runbooks/identity/impossible-travel-activity/" data-severity="medium" data-tactics="initial-access,defense-evasion,cred-access,persistence,lateral-movement,collection">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0002</span>
-      <span class="severity-badge severity-medium">Medium</span>
-    </div>
-    <h3>Impossible Travel Activity</h3>
-    <div class="runbook-card-description">
-      Entra ID Identity Protection risk detection for geographically impossible sign-in pairs. Covers VPN false positive triage, geo_distance_2points() speed calculation, token replay detection (T1550.004), and post-access blast radius assessment.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-persistence">Persistence</span>
-      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
-      <span class="mitre-tag mitre-collection">Collection</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-complete">Complete</span>
-    </div>
-  </a>
-
-  <a class="runbook-card" href="../runbooks/identity/leaked-credentials/" data-severity="high" data-tactics="recon,initial-access,persistence,defense-evasion,cred-access,lateral-movement,collection">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0003</span>
-      <span class="severity-badge severity-high">High</span>
-    </div>
-    <h3>Leaked Credentials</h3>
-    <div class="runbook-card-description">
-      Entra ID Identity Protection offline risk detection for credentials found in dark web dumps and info-stealer logs. Covers password timeline analysis, credential stuffing detection, legacy auth exposure, MFA assessment, and post-access blast radius.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-recon">Recon</span>
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-persistence">Persistence</span>
-      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
-      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
-      <span class="mitre-tag mitre-collection">Collection</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-complete">Complete</span>
-    </div>
-  </a>
-
-  <div class="runbook-card runbook-planned" data-severity="high" data-tactics="initial-access,cred-access">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0004</span>
-      <span class="severity-badge severity-high">High</span>
-    </div>
-    <h3>MFA Fatigue Attack</h3>
-    <div class="runbook-card-description">
-      Detects MFA push notification bombing attacks where adversaries repeatedly trigger MFA prompts hoping the user approves.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-planned">Planned</span>
-    </div>
+{% if rb.status == 'planned' %}
   </div>
+{% else %}
+  </a>
+{% endif %}
 
-  <div class="runbook-card runbook-planned" data-severity="high" data-tactics="cred-access,lateral-movement">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0005</span>
-      <span class="severity-badge severity-high">High</span>
-    </div>
-    <h3>Password Spray Detection</h3>
-    <div class="runbook-card-description">
-      Detects distributed password spray attacks across multiple accounts using Identity Protection and SigninLogs analysis.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-planned">Planned</span>
-    </div>
-  </div>
-
-  <div class="runbook-card runbook-planned" data-severity="critical" data-tactics="cred-access,collection,exfiltration">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0006</span>
-      <span class="severity-badge severity-critical">Critical</span>
-    </div>
-    <h3>Mass Secret Retrieval from Key Vault</h3>
-    <div class="runbook-card-description">
-      Detects mass enumeration and retrieval of secrets from Azure Key Vault, a common post-compromise activity for credential harvesting.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-collection">Collection</span>
-      <span class="mitre-tag mitre-exfiltration">Exfiltration</span>
-      <span class="tier-badge">Tier 3</span>
-      <span class="status-badge status-planned">Planned</span>
-    </div>
-  </div>
-
+{% endfor %}
 </div>

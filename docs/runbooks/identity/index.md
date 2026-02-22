@@ -2,25 +2,26 @@
 
 Investigation runbooks for identity-based alerts from Microsoft Entra ID, Identity Protection, and Conditional Access.
 
+{% set cat_runbooks = categories['identity'].runbooks %}
+{% if cat_runbooks %}
 ## Published Runbooks
 
 | ID | Alert Name | Severity | Key Log Sources |
 |----|-----------|----------|-----------------|
-| RB-0001 | [Unfamiliar Sign-In Properties](unfamiliar-sign-in-properties.md) | Medium | SigninLogs, AADUserRiskEvents, AADRiskyUsers, AuditLogs, OfficeActivity |
-| RB-0002 | [Impossible Travel Activity](impossible-travel-activity.md) | Medium | SigninLogs, AADUserRiskEvents, AADNonInteractiveUserSignInLogs, AuditLogs, OfficeActivity |
-| RB-0003 | [Leaked Credentials](leaked-credentials.md) | High | AADUserRiskEvents, AADRiskyUsers, SigninLogs, AADNonInteractiveUserSignInLogs, AuditLogs, OfficeActivity |
+{% for rb in cat_runbooks %}
+| {{ rb.id }} | [{{ rb.title }}]({{ rb.file_stem }}.md) | {{ rb.severity | capitalize }} | {{ rb.key_log_sources | join(', ') }} |
+{% endfor %}
 
+{% endif %}
 ## Planned Runbooks
 
 | Alert Name | Source Product | Priority |
 |-----------|---------------|----------|
-| MFA fatigue attack | Identity Protection | Tier 1 |
+| ~~MFA fatigue attack~~ | ~~Identity Protection~~ | ~~Tier 1~~ (completed: RB-0005) |
 | Suspicious browser sign-in | Identity Protection | Tier 1 |
-| Anonymous IP address sign-in | Identity Protection | Tier 1 |
 | Password spray detection | Identity Protection / Sentinel | Tier 1 |
 | Atypical travel | Identity Protection | Tier 1 |
 | Token anomaly detection | Identity Protection | Tier 1 |
-| ~~Leaked credentials~~ | ~~Identity Protection~~ | ~~Tier 1~~ (completed: RB-0003) |
 | Risky user confirmed compromised | Identity Protection | Tier 1 |
 | Suspicious inbox forwarding rule | Sentinel Analytics | Tier 1 |
 
