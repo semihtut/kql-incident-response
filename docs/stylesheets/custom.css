@@ -2165,3 +2165,685 @@ html {
     margin-left: 0.4rem;
   }
 }
+
+/* ----- 28. Copy Button Animation & KQL Syntax Enhancement ----- */
+
+/* 28a. "Copied!" tooltip on the copy button */
+.md-typeset .highlight .md-clipboard::after {
+  content: "Copied!";
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%) translateX(4px);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: var(--md-text-font, Inter), sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .highlight .md-clipboard::after {
+  background: var(--kql-teal);
+  color: #0d1117;
+  box-shadow: 0 0 12px rgba(65, 209, 167, 0.3);
+}
+
+[data-md-color-scheme="default"] .md-typeset .highlight .md-clipboard::after {
+  background: #2e7d32;
+  color: #f0ecf5;
+}
+
+/* Active state — when the copy fires */
+.md-typeset .highlight .md-clipboard--active::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* 28b. Button icon color change on success */
+.md-typeset .highlight .md-clipboard--active {
+  color: var(--kql-teal) !important;
+}
+
+[data-md-color-scheme="default"] .md-typeset .highlight .md-clipboard--active {
+  color: #2e7d32 !important;
+}
+
+/* 28c. Subtle flash on the code block border */
+@keyframes kql-copy-flash {
+  0%   { border-color: var(--kql-teal); box-shadow: 0 0 12px rgba(65, 209, 167, 0.2); }
+  100% { border-color: #30363d; box-shadow: none; }
+}
+
+.md-typeset .highlight.kql-copied {
+  animation: kql-copy-flash 0.8s ease-out;
+}
+
+[data-md-color-scheme="default"] .md-typeset .highlight.kql-copied {
+  border-color: #2e7d32;
+  transition: border-color 0.8s ease;
+}
+
+/* 28d. KQL syntax highlighting enhancements */
+
+/* Keywords — Pygments Token.Keyword (.k) */
+[data-md-color-scheme="slate"] .language-kql .k,
+[data-md-color-scheme="slate"] .language-kusto .k {
+  color: #bb9af7;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] .language-kql .k,
+[data-md-color-scheme="default"] .language-kusto .k {
+  color: #6a1b9a;
+  font-weight: 600;
+}
+
+/* String literals */
+[data-md-color-scheme="slate"] .language-kql .s,
+[data-md-color-scheme="slate"] .language-kusto .s,
+[data-md-color-scheme="slate"] .language-kql .s2,
+[data-md-color-scheme="slate"] .language-kusto .s2 {
+  color: #9ece6a;
+}
+
+[data-md-color-scheme="default"] .language-kql .s,
+[data-md-color-scheme="default"] .language-kusto .s,
+[data-md-color-scheme="default"] .language-kql .s2,
+[data-md-color-scheme="default"] .language-kusto .s2 {
+  color: #2e7d32;
+}
+
+/* Numbers */
+[data-md-color-scheme="slate"] .language-kql .mi,
+[data-md-color-scheme="slate"] .language-kusto .mi {
+  color: #ff9e64;
+}
+
+[data-md-color-scheme="default"] .language-kql .mi,
+[data-md-color-scheme="default"] .language-kusto .mi {
+  color: #d84315;
+}
+
+/* Comments */
+[data-md-color-scheme="slate"] .language-kql .c1,
+[data-md-color-scheme="slate"] .language-kusto .c1,
+[data-md-color-scheme="slate"] .language-kql .cm,
+[data-md-color-scheme="slate"] .language-kusto .cm {
+  color: #565f89;
+  font-style: italic;
+}
+
+[data-md-color-scheme="default"] .language-kql .c1,
+[data-md-color-scheme="default"] .language-kusto .c1,
+[data-md-color-scheme="default"] .language-kql .cm,
+[data-md-color-scheme="default"] .language-kusto .cm {
+  color: #78909c;
+  font-style: italic;
+}
+
+/* "let" keyword — JS adds class .kql-let */
+[data-md-color-scheme="slate"] .language-kql .kql-let,
+[data-md-color-scheme="slate"] .language-kusto .kql-let {
+  color: #7dcfff;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] .language-kql .kql-let,
+[data-md-color-scheme="default"] .language-kusto .kql-let {
+  color: #0277bd;
+  font-weight: 600;
+}
+
+/* Function names — JS adds class .kql-func */
+[data-md-color-scheme="slate"] .language-kql .kql-func,
+[data-md-color-scheme="slate"] .language-kusto .kql-func {
+  color: #7aa2f7;
+}
+
+[data-md-color-scheme="default"] .language-kql .kql-func,
+[data-md-color-scheme="default"] .language-kusto .kql-func {
+  color: #303f9f;
+}
+
+/* Table names — JS adds class .kql-table */
+[data-md-color-scheme="slate"] .language-kql .kql-table,
+[data-md-color-scheme="slate"] .language-kusto .kql-table {
+  color: #e0af68;
+  font-weight: 500;
+}
+
+[data-md-color-scheme="default"] .language-kql .kql-table,
+[data-md-color-scheme="default"] .language-kusto .kql-table {
+  color: #bf360c;
+  font-weight: 500;
+}
+
+/* Operators — JS adds class .kql-op */
+[data-md-color-scheme="slate"] .language-kql .kql-op,
+[data-md-color-scheme="slate"] .language-kusto .kql-op {
+  color: #bb9af7;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] .language-kql .kql-op,
+[data-md-color-scheme="default"] .language-kusto .kql-op {
+  color: #6a1b9a;
+  font-weight: 600;
+}
+
+/* Fix: Pygments marks . in dynamic access as Token.Error */
+.language-kql .err,
+.language-kusto .err {
+  color: inherit;
+  background: none;
+  border: none;
+}
+
+/* ----- 29. Variable Injection Banner ----- */
+
+/* 29a. Banner container — sticky below page title */
+.kql-var-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  margin: 0 0 1.5rem;
+  border-radius: var(--kql-radius);
+  border: 1px solid var(--kql-border);
+  transition: all 0.3s ease;
+}
+
+[data-md-color-scheme="slate"] .kql-var-banner {
+  background: rgba(22, 27, 34, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+[data-md-color-scheme="default"] .kql-var-banner {
+  background: rgba(232, 230, 237, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 29b. Banner header — always visible */
+.kql-var-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kql-var-banner-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--kql-accent);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kql-var-banner-icon {
+  opacity: 0.7;
+}
+
+.kql-var-banner-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--kql-text-muted);
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+.kql-var-banner-chevron {
+  transition: transform 0.3s ease;
+}
+
+.kql-var-banner.collapsed .kql-var-banner-chevron {
+  transform: rotate(180deg);
+}
+
+/* 29c. Banner body — collapsible */
+.kql-var-banner-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  padding: 0 1.2rem 1rem;
+  overflow: hidden;
+  max-height: 500px;
+  transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+.kql-var-banner.collapsed .kql-var-banner-body {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+}
+
+/* 29d. Individual field */
+.kql-var-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kql-var-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: var(--md-code-font, monospace);
+  color: var(--kql-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.kql-var-input {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: var(--md-code-font, monospace);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+[data-md-color-scheme="slate"] .kql-var-input {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: var(--kql-text);
+}
+
+[data-md-color-scheme="slate"] .kql-var-input:focus {
+  border-color: var(--kql-accent);
+  box-shadow: 0 0 8px var(--kql-glow);
+}
+
+[data-md-color-scheme="default"] .kql-var-input {
+  background: #f0f0f3;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--kql-text);
+}
+
+[data-md-color-scheme="default"] .kql-var-input:focus {
+  border-color: var(--md-primary-fg-color);
+  box-shadow: 0 0 4px rgba(74, 20, 140, 0.15);
+}
+
+/* Input modified from default */
+.kql-var-input.modified {
+  border-color: var(--kql-teal);
+}
+
+[data-md-color-scheme="slate"] .kql-var-input.modified {
+  box-shadow: 0 0 6px rgba(65, 209, 167, 0.2);
+}
+
+/* 29e. Action buttons */
+.kql-var-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  grid-column: 1 / -1;
+}
+
+.kql-var-apply,
+.kql-var-reset {
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kql-var-apply {
+  background: var(--kql-accent);
+  color: #0d1117;
+  border: none;
+}
+
+.kql-var-apply:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.kql-var-apply.applied {
+  background: var(--kql-teal);
+}
+
+.kql-var-reset {
+  background: transparent;
+  border: 1px solid var(--kql-border);
+  color: var(--kql-text-muted);
+}
+
+.kql-var-reset:hover {
+  border-color: var(--kql-text-muted);
+  color: var(--kql-text);
+}
+
+/* 29f. Responsive */
+@media (max-width: 768px) {
+  .kql-var-banner-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----- 30. Runbook Progress Bar ----- */
+
+/* 30a. Container */
+.kql-progress-bar {
+  margin: 0 0 2rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: var(--kql-radius);
+  border: 1px solid var(--kql-border);
+}
+
+[data-md-color-scheme="slate"] .kql-progress-bar {
+  background: rgba(22, 27, 34, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+[data-md-color-scheme="default"] .kql-progress-bar {
+  background: rgba(232, 230, 237, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* 30b. Track — background line */
+.kql-progress-track {
+  height: 3px;
+  background: rgba(139, 148, 158, 0.2);
+  border-radius: 2px;
+  position: relative;
+  margin-bottom: 0.6rem;
+}
+
+/* 30c. Fill — colored progress */
+.kql-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+[data-md-color-scheme="slate"] .kql-progress-fill {
+  background: linear-gradient(90deg, var(--kql-accent), var(--kql-accent-alt));
+  box-shadow: 0 0 8px var(--kql-glow);
+}
+
+[data-md-color-scheme="default"] .kql-progress-fill {
+  background: linear-gradient(90deg, var(--md-primary-fg-color), var(--kql-accent));
+}
+
+/* 30d. Phase buttons container */
+.kql-progress-phases {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* 30e. Individual phase button */
+.kql-progress-phase {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.kql-phase-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--kql-text-faint);
+  background: transparent;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.kql-phase-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kql-text-faint);
+  transition: color 0.3s ease;
+}
+
+/* Hover */
+.kql-progress-phase:hover .kql-phase-label {
+  color: var(--kql-text-muted);
+}
+
+.kql-progress-phase:hover .kql-phase-dot {
+  border-color: var(--kql-text-muted);
+}
+
+/* Active phase */
+.kql-progress-phase.active .kql-phase-dot {
+  border-color: var(--kql-accent);
+  background: var(--kql-accent);
+}
+
+[data-md-color-scheme="slate"] .kql-progress-phase.active .kql-phase-dot {
+  box-shadow: 0 0 8px var(--kql-glow-strong);
+}
+
+.kql-progress-phase.active .kql-phase-label {
+  color: var(--kql-accent);
+}
+
+/* Completed phase (before active) */
+.kql-progress-phase.completed .kql-phase-dot {
+  border-color: var(--kql-teal);
+  background: var(--kql-teal);
+}
+
+.kql-progress-phase.completed .kql-phase-label {
+  color: var(--kql-teal);
+}
+
+/* Light mode overrides */
+[data-md-color-scheme="default"] .kql-progress-phase.active .kql-phase-dot {
+  border-color: var(--md-primary-fg-color);
+  background: var(--md-primary-fg-color);
+  box-shadow: none;
+}
+
+[data-md-color-scheme="default"] .kql-progress-phase.active .kql-phase-label {
+  color: var(--md-primary-fg-color);
+}
+
+[data-md-color-scheme="default"] .kql-progress-phase.completed .kql-phase-dot {
+  border-color: #2e7d32;
+  background: #2e7d32;
+}
+
+[data-md-color-scheme="default"] .kql-progress-phase.completed .kql-phase-label {
+  color: #2e7d32;
+}
+
+/* 30f. TOC sidebar enhancement — "On This Page" */
+
+/* Title styling */
+[data-md-color-scheme="slate"] .md-nav--secondary > .md-nav__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--kql-text-muted);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--kql-border);
+  margin-bottom: 0.5rem;
+}
+
+[data-md-color-scheme="default"] .md-nav--secondary > .md-nav__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(74, 20, 140, 0.08);
+  margin-bottom: 0.5rem;
+}
+
+/* Active TOC link — accent bar */
+[data-md-color-scheme="slate"] .md-nav--secondary .md-nav__link--active {
+  color: var(--kql-accent);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--kql-accent);
+  background: rgba(122, 162, 247, 0.04);
+  border-radius: 0 4px 4px 0;
+}
+
+[data-md-color-scheme="default"] .md-nav--secondary .md-nav__link--active {
+  color: var(--md-primary-fg-color);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--md-primary-fg-color);
+  background: rgba(74, 20, 140, 0.04);
+  border-radius: 0 4px 4px 0;
+}
+
+/* 30g. Responsive */
+@media (max-width: 768px) {
+  .kql-progress-bar {
+    padding: 0.5rem 0.8rem;
+  }
+
+  .kql-phase-label {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .kql-phase-label {
+    display: none;
+  }
+
+  .kql-progress-phases {
+    justify-content: space-around;
+  }
+
+  .kql-phase-dot {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* ----- 31. Visual Polish & Spacing ----- */
+
+/* 31a. Code block breathing room */
+.md-typeset .highlight {
+  margin: 1.5rem 0;
+}
+
+.md-typeset h4 + .highlight,
+.md-typeset p + .highlight {
+  margin-top: 1rem;
+}
+
+.md-typeset .highlight + p,
+.md-typeset .highlight + h3,
+.md-typeset .highlight + h4 {
+  margin-top: 1.5rem;
+}
+
+.md-typeset .highlight + details,
+.md-typeset details + .highlight {
+  margin-top: 1.5rem;
+}
+
+/* 31b. Analyst Note admonitions */
+
+/* Type: analyst-tip — investigation guidance */
+:root {
+  --md-admonition-icon--analyst-tip: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>');
+}
+
+.md-typeset .admonition.analyst-tip,
+.md-typeset details.analyst-tip {
+  border-color: var(--kql-teal);
+}
+
+.md-typeset .analyst-tip > .admonition-title,
+.md-typeset .analyst-tip > summary {
+  background-color: rgba(65, 209, 167, 0.1);
+}
+
+.md-typeset .analyst-tip > .admonition-title::before,
+.md-typeset .analyst-tip > summary::before {
+  background-color: var(--kql-teal);
+  -webkit-mask-image: var(--md-admonition-icon--analyst-tip);
+  mask-image: var(--md-admonition-icon--analyst-tip);
+}
+
+/* Type: analyst-warning — false positive traps */
+:root {
+  --md-admonition-icon--analyst-warning: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>');
+}
+
+.md-typeset .admonition.analyst-warning,
+.md-typeset details.analyst-warning {
+  border-color: var(--severity-high);
+}
+
+.md-typeset .analyst-warning > .admonition-title,
+.md-typeset .analyst-warning > summary {
+  background-color: var(--severity-high-bg);
+}
+
+.md-typeset .analyst-warning > .admonition-title::before,
+.md-typeset .analyst-warning > summary::before {
+  background-color: var(--severity-high);
+  -webkit-mask-image: var(--md-admonition-icon--analyst-warning);
+  mask-image: var(--md-admonition-icon--analyst-warning);
+}
+
+/* Type: analyst-critical — must-not-miss items */
+:root {
+  --md-admonition-icon--analyst-critical: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
+}
+
+.md-typeset .admonition.analyst-critical,
+.md-typeset details.analyst-critical {
+  border-color: var(--severity-critical);
+}
+
+.md-typeset .analyst-critical > .admonition-title,
+.md-typeset .analyst-critical > summary {
+  background-color: var(--severity-critical-bg);
+}
+
+.md-typeset .analyst-critical > .admonition-title::before,
+.md-typeset .analyst-critical > summary::before {
+  background-color: var(--severity-critical);
+  -webkit-mask-image: var(--md-admonition-icon--analyst-critical);
+  mask-image: var(--md-admonition-icon--analyst-critical);
+}
+
+/* 31c. Print mode — hide interactive elements */
+@media print {
+  .kql-var-banner,
+  .kql-progress-bar {
+    display: none !important;
+  }
+}

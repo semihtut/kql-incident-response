@@ -28,6 +28,30 @@
       <span>Back to Runbook Gallery</span>
     </a>
   </nav>
+  <!-- Investigation Progress Bar -->
+  <div class="kql-progress-bar" id="kql-progress-bar" role="navigation" aria-label="Investigation progress">
+    <div class="kql-progress-track">
+      <div class="kql-progress-fill" id="kql-progress-fill"></div>
+    </div>
+    <div class="kql-progress-phases">
+      <button class="kql-progress-phase active" data-phase="triage">
+        <span class="kql-phase-dot"></span>
+        <span class="kql-phase-label">Triage</span>
+      </button>
+      <button class="kql-progress-phase" data-phase="investigation">
+        <span class="kql-phase-dot"></span>
+        <span class="kql-phase-label">Investigation</span>
+      </button>
+      <button class="kql-progress-phase" data-phase="containment">
+        <span class="kql-phase-dot"></span>
+        <span class="kql-phase-label">Containment</span>
+      </button>
+      <button class="kql-progress-phase" data-phase="evidence">
+        <span class="kql-phase-dot"></span>
+        <span class="kql-phase-label">Evidence</span>
+      </button>
+    </div>
+  </div>
   {% elif page and page.url and page.url != '' %}
   <nav class="runbook-back-nav" aria-label="Back navigation">
     <a href="{{ '' | url }}" class="back-to-gallery">
