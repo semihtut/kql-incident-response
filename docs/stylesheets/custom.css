@@ -1161,22 +1161,15 @@ html {
 
 .runbook-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.6rem;
   padding: 1rem 1.2rem;
   background: var(--kql-surface);
   border-radius: var(--kql-radius);
   margin: 1rem 0 2rem;
   border: 1px solid var(--kql-border);
-  overflow: hidden;
   max-width: 100%;
   box-sizing: border-box;
-}
-
-/* Ensure runbook-meta doesn't break out of the Material content column */
-.md-typeset .runbook-meta {
-  contain: inline-size;
 }
 
 [data-md-color-scheme="slate"] .runbook-meta {
@@ -1192,13 +1185,8 @@ html {
 .runbook-meta-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   font-size: 0.82rem;
-}
-
-/* Tactics row takes full width so tags don't overflow */
-.runbook-meta-item:last-child {
-  flex-basis: 100%;
   flex-wrap: wrap;
 }
 
@@ -1208,6 +1196,7 @@ html {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  min-width: 5rem;
 }
 
 /* ----- 16. CTA Section ----- */
