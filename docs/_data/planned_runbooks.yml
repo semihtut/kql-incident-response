@@ -218,3 +218,19 @@
     - "Persistence"
     - "Defense Evasion"
     - "Credential Access"
+
+- id: RB-0020
+  title: "Excessive User/Group Enumeration"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects excessive enumeration of users, groups, and directory objects
+    via Microsoft Graph API. Covers high-volume API call analysis, service
+    principal enumeration, post-enumeration lateral movement detection, and
+    organization-wide reconnaissance sweep.
+  tactics:
+    - "Discovery"
+    - "Reconnaissance"
+    - "Lateral Movement"
+    - "Collection"
