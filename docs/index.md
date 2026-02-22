@@ -142,20 +142,7 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
 ## Coverage
 
-<div class="coverage-cards">
-{% for slug in ['identity', 'endpoint', 'email', 'cloud-apps', 'azure-infrastructure', 'okta'] %}
-<a class="coverage-card" href="runbooks/{{ slug }}/index.md">
-  <div class="coverage-card-header">
-    <span class="coverage-card-name">{{ categories[slug].name }}</span>
-    <span class="coverage-card-count">{{ categories[slug].count }}/{{ categories[slug].total }}</span>
-  </div>
-  <div class="coverage-card-bar">
-    <div class="coverage-card-fill" style="width: {{ categories[slug].pct }}%"></div>
-  </div>
-  <span class="coverage-card-pct">{{ categories[slug].pct }}%</span>
-</a>
-{% endfor %}
-</div>
+{{ coverage_cards() }}
 
 See [Log Sources](log-sources.md) for the full reference of supported Sentinel tables.
 

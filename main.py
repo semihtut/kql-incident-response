@@ -254,6 +254,31 @@ def render_data_check_timeline(checks):
     return "\n".join(lines)
 
 
+def render_coverage_cards(categories):
+    """Generate the Coverage Cards HTML grid from category data."""
+    order = ["identity", "endpoint", "email", "cloud-apps", "azure-infrastructure", "okta"]
+    lines = ['<div class="coverage-cards" markdown="0">']
+
+    for slug in order:
+        cat = categories.get(slug)
+        if not cat:
+            continue
+        pct = cat.get("pct", 0)
+        lines.append(f'  <a class="coverage-card" href="runbooks/{slug}/">')
+        lines.append('    <div class="coverage-card-header">')
+        lines.append(f'      <span class="coverage-card-name">{cat["name"]}</span>')
+        lines.append(f'      <span class="coverage-card-count">{cat["count"]}/{cat["total"]}</span>')
+        lines.append("    </div>")
+        lines.append('    <div class="coverage-card-bar">')
+        lines.append(f'      <div class="coverage-card-fill" style="width: {pct}%"></div>')
+        lines.append("    </div>")
+        lines.append(f'    <span class="coverage-card-pct">{pct}%</span>')
+        lines.append("  </a>")
+
+    lines.append("</div>")
+    return "\n".join(lines)
+
+
 def define_env(env):
     """Called by mkdocs-macros-plugin at build time."""
     runbooks = scan_runbooks()
@@ -318,3 +343,8 @@ def define_env(env):
     def data_check_timeline(checks=None):
         """Render Data Availability Check timeline from frontmatter data_checks."""
         return render_data_check_timeline(checks)
+
+    @env.macro
+    def coverage_cards():
+        """Render Coverage Cards grid for the homepage."""
+        return render_coverage_cards(categories)
