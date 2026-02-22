@@ -98,6 +98,7 @@ nav:
           - Suspicious Service Principal Activity: runbooks/identity/suspicious-service-principal-activity.md
           - Consent Grant Attack: runbooks/identity/consent-grant-attack.md
           - Suspicious MFA Method Registration: runbooks/identity/suspicious-mfa-registration.md
+          - Privileged Role Assignment Anomaly: runbooks/identity/privileged-role-assignment.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md

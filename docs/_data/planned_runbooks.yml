@@ -110,3 +110,18 @@
     - "Privilege Escalation"
     - "Defense Evasion"
     - "Credential Access"
+
+- id: RB-0013
+  title: "Privileged Role Assignment Anomaly"
+  severity: critical
+  tier: 2
+  category: identity
+  description: >
+    Detects anomalous privileged directory role assignments in Entra ID and PIM,
+    including unauthorized Global Administrator grants, permanent assignments
+    bypassing PIM, and post-escalation tenant configuration changes.
+  tactics:
+    - "Persistence"
+    - "Privilege Escalation"
+    - "Defense Evasion"
+    - "Discovery"
