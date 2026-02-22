@@ -141,3 +141,18 @@
     - "Defense Evasion"
     - "Collection"
     - "Exfiltration"
+
+- id: RB-0015
+  title: "Conditional Access Policy Manipulation"
+  severity: critical
+  tier: 2
+  category: identity
+  description: >
+    Detects unauthorized modifications to Conditional Access policies that
+    weaken security posture, including policy disablement, exclusion additions,
+    trusted location manipulation, and MFA requirement removal.
+  tactics:
+    - "Defense Evasion"
+    - "Persistence"
+    - "Privilege Escalation"
+    - "Credential Access"

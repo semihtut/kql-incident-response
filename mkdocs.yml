@@ -100,6 +100,7 @@ nav:
           - Suspicious MFA Method Registration: runbooks/identity/suspicious-mfa-registration.md
           - Privileged Role Assignment Anomaly: runbooks/identity/privileged-role-assignment.md
           - AiTM Phishing / Anomalous Token: runbooks/identity/aitm-phishing-detection.md
+          - Conditional Access Manipulation: runbooks/identity/conditional-access-manipulation.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md
