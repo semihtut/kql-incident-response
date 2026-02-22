@@ -79,3 +79,19 @@
     - "Credential Access"
     - "Defense Evasion"
     - "Lateral Movement"
+
+- id: RB-0011
+  title: "Consent Grant Attack"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects illicit OAuth application consent grant attacks where users are
+    tricked into authorizing rogue applications with access to their email,
+    files, and directory data via delegated permissions.
+  tactics:
+    - "Initial Access"
+    - "Persistence"
+    - "Credential Access"
+    - "Collection"
+    - "Exfiltration"
