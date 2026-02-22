@@ -105,7 +105,9 @@ data_checks:
 > **RB-0023** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID SigninLogs + AADNonInteractiveUserSignInLogs
+>
 > **Detection Logic:** Any successful sign-in event from a designated break-glass account UPN
+>
 > **Primary MITRE Technique:** T1078.004 - Valid Accounts: Cloud Accounts
 
 ## Table of Contents

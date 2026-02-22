@@ -127,7 +127,9 @@ data_checks:
 > **RB-0014** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Entra ID Identity Protection + SigninLogs Anomaly Analysis
+>
 > **Risk Detection Name:** `anomalousToken` / `tokenIssuerAnomaly` / `suspiciousInboxForwardingActivity`
+>
 > **Primary MITRE Technique:** T1557 - Adversary-in-the-Middle + T1539 - Steal Web Session Cookie
 
 ## Table of Contents

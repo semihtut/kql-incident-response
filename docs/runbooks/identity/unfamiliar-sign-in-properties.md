@@ -182,7 +182,7 @@ data_checks:
         M --> O["Evidence\nCollection"]
         O --> P["Escalation\nif needed"]
 
-        style A fill:#ffd93d,color:#0d1117,stroke:#fbbf24
+        style A fill:#e0a527,color:#0d1117,stroke:#b8860b
         style M fill:#ff4757,color:#e6edf3,stroke:#dc2626
         style O fill:#4fc3f7,color:#0d1117,stroke:#38bdf8
         style F fill:#69db7c,color:#0d1117,stroke:#4ade80
@@ -192,7 +192,9 @@ data_checks:
 > **RB-0001** | Severity: Medium | Version: 1.0 | Last updated: 2026-02-21
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection
+>
 > **Risk Detection Name:** `unfamiliarFeatures`
+>
 > **Primary MITRE Technique:** T1078.004 - Valid Accounts: Cloud Accounts
 
 ## Table of Contents

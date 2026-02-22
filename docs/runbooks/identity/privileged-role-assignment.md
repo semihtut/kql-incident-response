@@ -117,7 +117,9 @@ data_checks:
 > **RB-0013** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Audit Logs + PIM Activation Logs
+>
 > **Risk Detection Name:** `Add member to role` / `Add eligible member to role` audit events + PIM role activation anomaly
+>
 > **Primary MITRE Technique:** T1098.003 - Account Manipulation: Additional Cloud Roles
 
 ## Table of Contents

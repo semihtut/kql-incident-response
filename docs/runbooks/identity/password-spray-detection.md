@@ -118,7 +118,9 @@ data_checks:
 > **RB-0006** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection + SigninLogs Pattern Analysis
+>
 > **Risk Detection Name:** `passwordSpray` + ResultType `50126` pattern
+>
 > **Primary MITRE Technique:** T1110.003 - Brute Force: Password Spraying
 
 ## Table of Contents

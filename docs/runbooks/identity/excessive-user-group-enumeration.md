@@ -93,7 +93,9 @@ data_checks:
 > **RB-0020** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** MicrosoftGraphActivityLogs + AuditLogs Analysis
+>
 > **Detection Logic:** High-volume directory read operations via Graph API or Entra ID
+>
 > **Primary MITRE Technique:** T1087.004 - Account Discovery: Cloud Account
 
 ## Table of Contents

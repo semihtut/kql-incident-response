@@ -116,7 +116,9 @@ data_checks:
 > **RB-0010** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Audit Logs + AADServicePrincipalSignInLogs Pattern Analysis
+>
 > **Risk Detection Name:** Anomalous SP sign-in + `AddServicePrincipalCredentials` audit events
+>
 > **Primary MITRE Technique:** T1098.001 - Account Manipulation: Additional Cloud Credentials
 
 ## Table of Contents

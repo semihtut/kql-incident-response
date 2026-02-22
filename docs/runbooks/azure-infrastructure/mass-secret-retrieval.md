@@ -117,7 +117,9 @@ data_checks:
 > **RB-0007** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Defender for Key Vault + Sentinel Analytics (AzureDiagnostics)
+>
 > **Detection Operations:** `SecretGet`, `SecretList`, `KeyGet`, `KeyList`, `CertificateGet` volume anomalies
+>
 > **Primary MITRE Technique:** T1555.006 - Credentials from Password Stores: Cloud Secrets Management Stores
 
 ## Table of Contents

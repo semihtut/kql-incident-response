@@ -93,7 +93,9 @@ data_checks:
 > **RB-0018** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Entra ID Audit Logs + SigninLogs Correlation
+>
 > **Detection Logic:** SSPR events correlated with atypical location, device, or post-reset activity
+>
 > **Primary MITRE Technique:** T1098 - Account Manipulation
 
 ## Table of Contents

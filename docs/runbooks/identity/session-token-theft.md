@@ -109,7 +109,9 @@ data_checks:
 > **RB-0021** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Entra ID Identity Protection + SigninLogs Cross-IP Analysis
+>
 > **Detection Logic:** Stolen session token replayed from attacker infrastructure
+>
 > **Primary MITRE Technique:** T1539 - Steal Web Session Cookie
 
 ## Table of Contents

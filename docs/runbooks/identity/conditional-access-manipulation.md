@@ -102,7 +102,9 @@ data_checks:
 > **RB-0015** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Audit Logs
+>
 > **Risk Detection Name:** `Update conditional access policy` / `Delete conditional access policy` / `Disable Security Defaults` audit events
+>
 > **Primary MITRE Technique:** T1562.001 - Impair Defenses: Disable or Modify Tools
 
 ## Table of Contents

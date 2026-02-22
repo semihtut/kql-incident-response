@@ -125,7 +125,9 @@ data_checks:
 > **RB-0003** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection
+>
 > **Risk Detection Name:** `leakedCredentials`
+>
 > **Primary MITRE Technique:** T1078.004 - Valid Accounts: Cloud Accounts
 
 ## Table of Contents

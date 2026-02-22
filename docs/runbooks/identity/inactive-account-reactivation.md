@@ -93,7 +93,9 @@ data_checks:
 > **RB-0019** | Severity: Medium | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Custom Detection via SigninLogs Dormancy Analysis
+>
 > **Detection Logic:** Successful sign-in on accounts with no activity in 30-90+ days
+>
 > **Primary MITRE Technique:** T1078.004 - Valid Accounts: Cloud Accounts
 
 ## Table of Contents

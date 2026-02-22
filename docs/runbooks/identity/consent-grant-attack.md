@@ -122,7 +122,9 @@ data_checks:
 > **RB-0011** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Audit Logs + Defender for Cloud Apps OAuth App Governance
+>
 > **Risk Detection Name:** `Consent to application` audit event + Risky OAuth app alert
+>
 > **Primary MITRE Technique:** T1528 - Steal Application Access Token
 
 ## Table of Contents

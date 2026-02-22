@@ -112,7 +112,9 @@ data_checks:
 > **RB-0012** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Audit Logs + Identity Protection Risk Detections
+>
 > **Risk Detection Name:** `User registered security info` / `Update user` (StrongAuthenticationMethod) audit events
+>
 > **Primary MITRE Technique:** T1556.006 - Modify Authentication Process: Multi-Factor Authentication
 
 ## Table of Contents

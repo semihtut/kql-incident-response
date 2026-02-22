@@ -100,7 +100,9 @@ data_checks:
 > **RB-0025** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** SigninLogs + AADNonInteractiveUserSignInLogs + AuditLogs Analysis
+>
 > **Detection Logic:** Sync account activity from unauthorized IPs, off-schedule timing, or performing operations outside normal sync scope
+>
 > **Primary MITRE Technique:** T1078.002 - Valid Accounts: Domain Accounts
 
 ## Table of Contents

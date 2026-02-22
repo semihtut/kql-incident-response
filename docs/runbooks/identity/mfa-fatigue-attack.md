@@ -132,7 +132,9 @@ data_checks:
 > **RB-0005** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection + SigninLogs Pattern Analysis
+>
 > **Risk Detection Name:** `mfaFraud` + ResultType `500121` pattern
+>
 > **Primary MITRE Technique:** T1621 - Multi-Factor Authentication Request Generation
 
 ## Table of Contents

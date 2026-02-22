@@ -117,7 +117,9 @@ data_checks:
 > **RB-0024** | Severity: Critical | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Audit Logs
+>
 > **Risk Detection Name:** `Set domain authentication` / `Set federation settings on domain` / `Set DomainFederationSettings` audit events
+>
 > **Primary MITRE Technique:** T1484.002 - Domain Policy Modification: Trust Modification
 
 ## Table of Contents

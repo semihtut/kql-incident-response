@@ -95,7 +95,9 @@ data_checks:
 > **RB-0017** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Custom Detection via SigninLogs ASN Analysis
+>
 > **Detection Logic:** Sign-ins from known VPS, hosting, Tor, and proxy infrastructure ASNs
+>
 > **Primary MITRE Technique:** T1090.002 - Proxy: External Proxy
 
 ## Table of Contents

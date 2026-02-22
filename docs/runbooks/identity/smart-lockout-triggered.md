@@ -92,7 +92,9 @@ data_checks:
 > **RB-0016** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Smart Lockout + SigninLogs Analysis
+>
 > **Risk Detection:** ResultType `50053` (Account locked due to repeated sign-in attempts)
+>
 > **Primary MITRE Technique:** T1110.001 - Brute Force: Password Guessing
 
 ## Table of Contents

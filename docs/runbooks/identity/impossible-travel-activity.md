@@ -125,7 +125,9 @@ data_checks:
 > **RB-0002** | Severity: Medium | Version: 1.0 | Last updated: 2026-02-21
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection
+>
 > **Risk Detection Name:** `impossibleTravel`
+>
 > **Primary MITRE Technique:** T1078.004 - Valid Accounts: Cloud Accounts
 
 ## Table of Contents

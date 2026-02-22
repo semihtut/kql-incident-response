@@ -130,7 +130,9 @@ data_checks:
 > **RB-0004** | Severity: Medium | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection
+>
 > **Risk Detection Name:** `anonymizedIPAddress`
+>
 > **Primary MITRE Technique:** T1090.003 - Proxy: Multi-hop Proxy
 
 ## Table of Contents

@@ -112,7 +112,9 @@ data_checks:
 > **RB-0008** | Severity: High | Version: 1.0 | Last updated: 2026-02-22
 >
 > **Alert Source:** Microsoft Defender for Cloud Apps + Sentinel Analytics (OfficeActivity)
+>
 > **Detection Operations:** `New-InboxRule`, `Set-InboxRule`, `Set-Mailbox` with forwarding parameters
+>
 > **Primary MITRE Technique:** T1114.003 - Email Collection: Email Forwarding Rule
 
 ## Table of Contents
