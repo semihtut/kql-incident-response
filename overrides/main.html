@@ -19,11 +19,20 @@
 {% endblock %}
 
 {% block content %}
-  {% if page and page.meta and page.meta.id is defined and page.meta.id is string and page.meta.id[:3] == 'RB-' %}
+  {% if page and page.is_homepage %}
+    {# No back button on homepage #}
+  {% elif page and page.meta and page.meta.id is defined and page.meta.id is string and page.meta.id[:3] == 'RB-' %}
   <nav class="runbook-back-nav" aria-label="Back navigation">
     <a href="{{ 'runbooks/gallery/' | url }}" class="back-to-gallery">
       <span class="back-arrow">&larr;</span>
-      <span>Back to Runbooks</span>
+      <span>Back to Runbook Gallery</span>
+    </a>
+  </nav>
+  {% elif page and page.url and page.url != '' %}
+  <nav class="runbook-back-nav" aria-label="Back navigation">
+    <a href="{{ '' | url }}" class="back-to-gallery">
+      <span class="back-arrow">&larr;</span>
+      <span>Back to Home</span>
     </a>
   </nav>
   {% endif %}

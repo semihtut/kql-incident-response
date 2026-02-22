@@ -1470,3 +1470,182 @@ html {
 [data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover {
   background: #484f58;
 }
+
+/* =====================================================
+   25. Runbook Content Readability
+   Designed by Defne (UX/Content Designer)
+   Implemented by Emre (Web Architect)
+   ===================================================== */
+
+/* 25a. Content max-width for comfortable reading (~70ch) */
+.md-content__inner {
+  max-width: 52rem;
+}
+
+/* 25b. Softer body text — reduce harsh white-on-black contrast
+   #e6edf3 → #b8c0cc gives ~10:1 ratio on #0d1117 — still WCAG AAA,
+   but much gentler for long reading sessions */
+[data-md-color-scheme="slate"] .md-typeset {
+  color: #b8c0cc;
+  line-height: 1.8;
+}
+
+/* 25c. Bold text — pop with full brightness + slight accent tint
+   Key fix: bold was invisible because same color as body text */
+[data-md-color-scheme="slate"] .md-typeset strong,
+[data-md-color-scheme="slate"] .md-typeset b {
+  color: #e6edf3;
+  font-weight: 700;
+}
+
+/* 25d. Heading hierarchy — visual weight and accent colors */
+[data-md-color-scheme="slate"] .md-typeset h2 {
+  color: var(--kql-accent);
+  border-bottom: 1px solid rgba(122, 162, 247, 0.15);
+  padding-bottom: 0.6rem;
+  margin-top: 3rem;
+  margin-bottom: 1.2rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h3 {
+  color: #e2e8f0;
+  margin-top: 2.2rem;
+  margin-bottom: 0.8rem;
+  font-size: 1.1rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h4 {
+  color: var(--kql-accent-alt);
+  margin-top: 1.6rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* 25e. Horizontal rules — gradient dividers for visual rhythm */
+[data-md-color-scheme="slate"] .md-typeset hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(122, 162, 247, 0.3),
+    transparent
+  );
+  margin: 3rem 0;
+}
+
+/* 25f. Paragraph and list spacing */
+[data-md-color-scheme="slate"] .md-typeset p {
+  margin-bottom: 1rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset ul li,
+[data-md-color-scheme="slate"] .md-typeset ol li {
+  margin-bottom: 0.3rem;
+}
+
+/* 25g. Blockquote — accent left border with subtle background */
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+  border-left: 3px solid var(--kql-accent);
+  background: rgba(122, 162, 247, 0.04);
+  padding: 0.8rem 1.2rem;
+  border-radius: 0 var(--kql-radius) var(--kql-radius) 0;
+  color: #9ca8b8;
+}
+
+[data-md-color-scheme="slate"] .md-typeset blockquote p {
+  color: #9ca8b8;
+}
+
+/* 25h. Table header — stronger visual weight */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* 25i. Inline code in body text — slightly brighter for readability */
+[data-md-color-scheme="slate"] .md-typeset code:not(.highlight code) {
+  font-size: 0.85em;
+  padding: 0.15em 0.4em;
+}
+
+/* ----- 25-light. Light mode counterparts ----- */
+
+.md-content__inner {
+  max-width: 52rem;
+}
+
+[data-md-color-scheme="default"] .md-typeset {
+  line-height: 1.8;
+  color: #2f3640;
+}
+
+[data-md-color-scheme="default"] .md-typeset strong,
+[data-md-color-scheme="default"] .md-typeset b {
+  color: #1a1d23;
+  font-weight: 700;
+}
+
+[data-md-color-scheme="default"] .md-typeset h2 {
+  color: var(--md-primary-fg-color);
+  border-bottom: 1px solid rgba(74, 20, 140, 0.12);
+  padding-bottom: 0.6rem;
+  margin-top: 3rem;
+  margin-bottom: 1.2rem;
+  font-size: 1.4rem;
+}
+
+[data-md-color-scheme="default"] .md-typeset h3 {
+  color: #1f2328;
+  margin-top: 2.2rem;
+  margin-bottom: 0.8rem;
+  font-size: 1.1rem;
+}
+
+[data-md-color-scheme="default"] .md-typeset h4 {
+  color: var(--kql-accent-alt);
+  margin-top: 1.6rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+[data-md-color-scheme="default"] .md-typeset hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(74, 20, 140, 0.2),
+    transparent
+  );
+  margin: 3rem 0;
+}
+
+[data-md-color-scheme="default"] .md-typeset blockquote {
+  border-left: 3px solid var(--md-primary-fg-color);
+  background: rgba(74, 20, 140, 0.04);
+  padding: 0.8rem 1.2rem;
+  border-radius: 0 var(--kql-radius) var(--kql-radius) 0;
+}
+
+/* ----- 25-rwd. Responsive adjustments ----- */
+
+@media (max-width: 768px) {
+  .md-content__inner {
+    max-width: 100%;
+  }
+
+  [data-md-color-scheme="slate"] .md-typeset h2 {
+    font-size: 1.2rem;
+    margin-top: 2rem;
+  }
+
+  [data-md-color-scheme="slate"] .md-typeset h3 {
+    font-size: 1rem;
+  }
+}
