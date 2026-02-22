@@ -93,6 +93,7 @@ nav:
           - Leaked Credentials: runbooks/identity/leaked-credentials.md
           - Anonymous IP Address Sign-In: runbooks/identity/anonymous-ip-address.md
           - MFA Fatigue Attack: runbooks/identity/mfa-fatigue-attack.md
+          - Password Spray Detection: runbooks/identity/password-spray-detection.md
       - Endpoint: runbooks/endpoint/index.md
       - Email: runbooks/email/index.md
       - Cloud Apps: runbooks/cloud-apps/index.md
