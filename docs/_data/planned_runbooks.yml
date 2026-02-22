@@ -125,3 +125,19 @@
     - "Privilege Escalation"
     - "Defense Evasion"
     - "Discovery"
+
+- id: RB-0014
+  title: "AiTM Phishing / Anomalous Token Detection"
+  severity: critical
+  tier: 2
+  category: identity
+  description: >
+    Detects Adversary-in-the-Middle phishing attacks and stolen session token
+    replay. Covers anomalous token risk events, session IP divergence, token
+    replay patterns, BEC activity chain, and multi-persistence detection.
+  tactics:
+    - "Initial Access"
+    - "Credential Access"
+    - "Defense Evasion"
+    - "Collection"
+    - "Exfiltration"

@@ -99,6 +99,7 @@ nav:
           - Consent Grant Attack: runbooks/identity/consent-grant-attack.md
           - Suspicious MFA Method Registration: runbooks/identity/suspicious-mfa-registration.md
           - Privileged Role Assignment Anomaly: runbooks/identity/privileged-role-assignment.md
+          - AiTM Phishing / Anomalous Token: runbooks/identity/aitm-phishing-detection.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md
