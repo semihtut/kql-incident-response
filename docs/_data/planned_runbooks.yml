@@ -187,3 +187,18 @@
     - "Defense Evasion"
     - "Credential Access"
     - "Command and Control"
+
+- id: RB-0018
+  title: "Self-Service Password Reset Abuse"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects abuse of Self-Service Password Reset (SSPR) from atypical
+    locations or devices, password resets followed by immediate MFA changes
+    or suspicious activity, and organization-wide anomalous reset patterns.
+  tactics:
+    - "Credential Access"
+    - "Persistence"
+    - "Initial Access"
+    - "Defense Evasion"
