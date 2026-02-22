@@ -5,6 +5,7 @@ Scans docs/runbooks/*/*.md for YAML frontmatter and registers template variables
 so that index pages, gallery cards, and homepage stats are generated automatically.
 """
 
+import re
 import yaml
 from pathlib import Path
 
@@ -332,6 +333,19 @@ def define_env(env):
         for t in rb.get("mitre_attack", {}).get("tactics", []):
             unique_tactics.add(t.get("tactic_id", ""))
 
+    # Count total KQL code blocks across all runbooks
+    kql_block_re = re.compile(r"^```kql\s*\n.*?^```", re.MULTILINE | re.DOTALL)
+    query_count = 0
+    for cat_dir in sorted(RUNBOOKS_DIR.iterdir()):
+        if not cat_dir.is_dir():
+            continue
+        for md_file in cat_dir.glob("*.md"):
+            if md_file.name == "index.md":
+                continue
+            query_count += len(kql_block_re.findall(
+                md_file.read_text(encoding="utf-8")
+            ))
+
     # Count total platform-supported log tables from log-sources.md
     log_sources_file = DOCS_DIR / "log-sources.md"
     table_count = 0
@@ -356,6 +370,7 @@ def define_env(env):
         "technique_count": len(unique_techniques),
         "tactic_count": len(unique_tactics),
         "table_count": table_count,
+        "query_count": query_count,
     }
 
     # Register macros

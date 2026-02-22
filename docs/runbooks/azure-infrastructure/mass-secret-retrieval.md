@@ -529,8 +529,7 @@ let Baseline = HistoricalAccess
     MaxDailySecretGets = max(DailySecretGets),
     AvgDailyUniqueSecrets = round(avg(DailyUniqueSecrets), 1),
     MaxDailyUniqueSecrets = max(DailyUniqueSecrets),
-    DaysWithAccess = count(),
-    BaselineSecrets = make_set_if(tostring(HistoricalAccess | where not(IsAlertDay) | distinct id_s), true);
+    DaysWithAccess = count();
 // --- Alert day: What happened today ---
 let AlertDay = HistoricalAccess
 | where IsAlertDay

@@ -558,49 +558,62 @@ html {
 
 .kql-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
   margin: 2rem 0;
 }
 
 .kql-step {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+  text-align: center;
+  padding: 1.5rem 1.2rem;
+  border: 1px solid var(--kql-border);
+  border-radius: var(--kql-radius-lg);
+  background: var(--kql-surface);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.kql-step-number {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  background: var(--kql-accent);
-  color: #0d1117;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
+.kql-step:hover {
+  border-color: var(--kql-border-hover);
+  box-shadow: 0 0 16px var(--kql-glow);
+}
+
+[data-md-color-scheme="default"] .kql-step {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-md-color-scheme="default"] .kql-step:hover {
+  border-color: rgba(100, 80, 160, 0.25);
+  box-shadow: 0 2px 12px rgba(100, 80, 160, 0.08);
+}
+
+.kql-step-icon {
+  display: block;
+  font-size: 1.8rem;
+  margin-bottom: 0.6rem;
+  color: var(--kql-accent);
+}
+
+[data-md-color-scheme="default"] .kql-step-icon {
+  color: var(--md-primary-fg-color);
+}
+
+.kql-step h4 {
+  margin: 0 0 0.4rem;
   font-size: 0.95rem;
 }
 
-[data-md-color-scheme="slate"] .kql-step-number {
-  box-shadow: 0 0 12px var(--kql-glow);
-}
-
-[data-md-color-scheme="default"] .kql-step-number {
-  background: var(--md-primary-fg-color);
-  color: #f0ecf5;
-}
-
-.kql-step-content h4 {
-  margin: 0 0 0.3rem;
-  font-size: 0.95rem;
-}
-
-.kql-step-content p {
+.kql-step p {
   margin: 0;
   font-size: 0.82rem;
   color: var(--kql-text-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .kql-steps {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ----- 7. Severity Badges (Neon + Pulse Dots) ----- */
@@ -1484,10 +1497,6 @@ html {
   }
 
   .kql-features {
-    grid-template-columns: 1fr;
-  }
-
-  .kql-steps {
     grid-template-columns: 1fr;
   }
 
@@ -2928,4 +2937,69 @@ html {
   .kql-progress-bar {
     display: none !important;
   }
+}
+
+/* ----- 32. Query Validation Section (Homepage) ----- */
+
+.kql-validation-section {
+  margin: 1rem 0;
+}
+
+.kql-validation-section > p:first-of-type {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--kql-text-muted);
+  max-width: 72ch;
+}
+
+.kql-validation-stats table {
+  border: 1px solid var(--kql-border);
+  border-radius: var(--kql-radius);
+  overflow: hidden;
+  background: var(--kql-surface);
+  width: auto;
+  margin: 1.2rem 0;
+}
+
+.kql-validation-stats th {
+  display: none;
+}
+
+.kql-validation-stats td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--kql-border);
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+
+.kql-validation-stats tr:last-child td {
+  border-bottom: none;
+}
+
+.kql-validation-stats td:first-child {
+  white-space: nowrap;
+  color: var(--kql-text);
+}
+
+.kql-validation-stats td:last-child {
+  color: var(--kql-text-muted);
+}
+
+.kql-validated-icon {
+  color: var(--kql-teal);
+  vertical-align: middle;
+}
+
+/* Light mode overrides */
+[data-md-color-scheme="default"] .kql-validation-stats table {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-md-color-scheme="default"] .kql-validation-stats td {
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-md-color-scheme="default"] .kql-validation-section > p:first-of-type {
+  color: #57606a;
 }

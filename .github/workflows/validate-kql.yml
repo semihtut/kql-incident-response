@@ -1,0 +1,39 @@
+name: Validate KQL Syntax
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/runbooks/**/*.md"
+      - "scripts/**"
+      - ".github/workflows/validate-kql.yml"
+  pull_request:
+    paths:
+      - "docs/runbooks/**/*.md"
+      - "scripts/**"
+      - ".github/workflows/validate-kql.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: KQL Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore scripts/KqlValidator/KqlValidator.csproj
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Extract and validate KQL queries
+        run: python scripts/validate_kql.py --docs-dir docs --validator scripts/KqlValidator

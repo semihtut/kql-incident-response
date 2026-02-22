@@ -61,9 +61,9 @@ Every runbook maps to MITRE ATT&CK tactics and techniques with confidence levels
 
 <span class="icon">:material-test-tube:</span>
 
-### Battle-Tested KQL
+### CI-Validated KQL
 
-Production-grade queries validated with synthetic `datatable` tests. Every query includes baseline comparison to distinguish real threats from noise.
+Every query is syntax-checked by Microsoft's official [Kusto.Language](https://www.nuget.org/packages/Microsoft.Azure.Kusto.Language) parser on each commit. Includes synthetic `datatable` tests and mandatory baseline comparisons.
 
 </div>
 
@@ -76,36 +76,33 @@ Production-grade queries validated with synthetic `datatable` tests. Every query
 <div class="kql-steps" markdown>
 
 <div class="kql-step" markdown>
-<div class="kql-step-number">1</div>
-<div class="kql-step-content" markdown>
+
+<span class="kql-step-icon">:material-magnify:</span>
 
 #### Find your alert
 
 Browse the [Runbook Gallery](runbooks/gallery.md) or search by alert name, MITRE tactic, or severity.
 
 </div>
-</div>
 
 <div class="kql-step" markdown>
-<div class="kql-step-number">2</div>
-<div class="kql-step-content" markdown>
+
+<span class="kql-step-icon">:material-clipboard-check-outline:</span>
 
 #### Check prerequisites
 
 Each runbook lists required log sources, license tiers, and RBAC roles needed.
 
 </div>
-</div>
 
 <div class="kql-step" markdown>
-<div class="kql-step-number">3</div>
-<div class="kql-step-content" markdown>
+
+<span class="kql-step-icon">:material-play-circle-outline:</span>
 
 #### Run the investigation
 
 Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
-</div>
 </div>
 
 </div>
@@ -145,6 +142,29 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 {{ coverage_cards() }}
 
 See [Log Sources](log-sources.md) for the full reference of supported Sentinel tables.
+
+---
+
+## Query Validation
+
+<div class="kql-validation-section" markdown>
+
+Every KQL query in this project is automatically validated using Microsoft's official **Kusto.Language** parser — the same engine that powers Azure Data Explorer and Sentinel. This runs on every commit via [GitHub Actions CI](https://github.com/semihtut/kql-incident-response/actions).
+
+<div class="kql-validation-stats" markdown>
+
+| | |
+|---|---|
+| :material-check-circle:{ .kql-validated-icon } **{{ stats.query_count }} queries validated** | across {{ stats.runbook_count }} runbooks |
+| :material-cog:{ .kql-validated-icon } **Validation engine** | [Microsoft.Azure.Kusto.Language](https://www.nuget.org/packages/Microsoft.Azure.Kusto.Language) (offline, no cluster required) |
+| :material-sync:{ .kql-validated-icon } **Runs on** | Every push and pull request |
+
+</div>
+
+!!! note "Found a syntax issue?"
+    While all queries pass the official KQL parser, minor issues may still exist in edge cases — such as deprecated functions or Sentinel-specific operators not covered by the offline parser. If you encounter a query that doesn't run in your environment, please [open an issue](https://github.com/semihtut/kql-incident-response/issues) or submit a PR. Fixes are usually a one-line change.
+
+</div>
 
 ---
 

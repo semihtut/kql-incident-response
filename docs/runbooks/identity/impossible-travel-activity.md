@@ -466,10 +466,10 @@ let signins = SigninLogs
     | summarize arg_max(SigninTime, *) by IPAddress
     | top 2 by SigninTime desc;
 // Calculate pairwise distance and speed
-let signin1 = toscalar(signins | top 1 by SigninTime asc | project pack("time", SigninTime, "ip", IPAddress, "lat", Lat, "lon", Lon, "city", City, "country", Country, "deviceId", DeviceId));
-let signin2 = toscalar(signins | top 1 by SigninTime desc | project pack("time", SigninTime, "ip", IPAddress, "lat", Lat, "lon", Lon, "city", City, "country", Country, "deviceId", DeviceId));
-let time1 = todatetime(signin1.time);
-let time2 = todatetime(signin2.time);
+let signin1 = toscalar(signins | top 1 by SigninTime asc | project pack("signin_time", SigninTime, "ip", IPAddress, "lat", Lat, "lon", Lon, "city", City, "country", Country, "deviceId", DeviceId));
+let signin2 = toscalar(signins | top 1 by SigninTime desc | project pack("signin_time", SigninTime, "ip", IPAddress, "lat", Lat, "lon", Lon, "city", City, "country", Country, "deviceId", DeviceId));
+let time1 = todatetime(signin1.signin_time);
+let time2 = todatetime(signin2.signin_time);
 let lat1 = toreal(signin1.lat);
 let lon1 = toreal(signin1.lon);
 let lat2 = toreal(signin2.lat);

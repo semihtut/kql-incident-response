@@ -1612,7 +1612,7 @@ TestBaselineSignIns
             "ANOMALOUS - Frequent break-glass usage (should be near-zero)",
         "REVIEW"
     )
-| project UserPrincipalName, BaselineAssessment, TotalSignIns, SuccessfulSignIns, DistinctIPs, Countries
+| project UserPrincipalName, BaselineAssessment, TotalSignIns, SuccessfulSignIns, DistinctIPs, Countries;
 // Expected: breakglass1 = "EXPECTED - No break-glass usage in 90 days"
 // Expected: breakglass2 = "ANOMALOUS - Frequent break-glass usage"
 
