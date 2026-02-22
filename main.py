@@ -254,6 +254,16 @@ def render_data_check_timeline(checks):
     return "\n".join(lines)
 
 
+CATEGORY_ICONS = {
+    "identity": "&#128274;",       # lock
+    "endpoint": "&#128187;",       # laptop
+    "email": "&#128231;",          # envelope
+    "cloud-apps": "&#9729;",       # cloud
+    "azure-infrastructure": "&#9881;",  # gear
+    "okta": "&#128273;",           # key
+}
+
+
 def render_coverage_cards(categories):
     """Generate the Coverage Cards HTML grid from category data."""
     order = ["identity", "endpoint", "email", "cloud-apps", "azure-infrastructure", "okta"]
@@ -263,16 +273,26 @@ def render_coverage_cards(categories):
         cat = categories.get(slug)
         if not cat:
             continue
+        count = cat["count"]
+        total = cat["total"]
         pct = cat.get("pct", 0)
-        lines.append(f'  <a class="coverage-card" href="runbooks/{slug}/">')
-        lines.append('    <div class="coverage-card-header">')
-        lines.append(f'      <span class="coverage-card-name">{cat["name"]}</span>')
-        lines.append(f'      <span class="coverage-card-count">{cat["count"]}/{cat["total"]}</span>')
-        lines.append("    </div>")
-        lines.append('    <div class="coverage-card-bar">')
-        lines.append(f'      <div class="coverage-card-fill" style="width: {pct}%"></div>')
-        lines.append("    </div>")
-        lines.append(f'    <span class="coverage-card-pct">{pct}%</span>')
+        icon = CATEGORY_ICONS.get(slug, "")
+        active_class = " active" if count > 0 else ""
+
+        lines.append(f'  <a class="coverage-card{active_class}" href="runbooks/{slug}/">')
+        lines.append(f'    <span class="coverage-card-icon">{icon}</span>')
+        lines.append(f'    <span class="coverage-card-name">{cat["name"]}</span>')
+
+        if count > 0:
+            lines.append(f'    <span class="coverage-card-stat">{count} runbook{"s" if count != 1 else ""}</span>')
+            lines.append('    <div class="coverage-card-bar">')
+            lines.append(f'      <div class="coverage-card-fill" style="width: {pct}%"></div>')
+            lines.append("    </div>")
+            if total > count:
+                lines.append(f'    <span class="coverage-card-detail">{count} of {total} planned</span>')
+        else:
+            lines.append('    <span class="coverage-card-stat coming-soon">Coming Soon</span>')
+
         lines.append("  </a>")
 
     lines.append("</div>")
