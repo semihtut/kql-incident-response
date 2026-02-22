@@ -166,7 +166,7 @@ def load_planned_runbooks(published_ids):
     return planned
 
 
-def compute_categories(runbooks):
+def compute_categories(runbooks, planned=None):
     """Group published runbooks by category with counts."""
     cats = {}
     for rb in runbooks:
@@ -176,6 +176,7 @@ def compute_categories(runbooks):
                 "slug": slug,
                 "name": CATEGORY_MAP[slug],
                 "count": 0,
+                "planned_count": 0,
                 "runbooks": [],
             }
         cats[slug]["count"] += 1
@@ -184,7 +185,25 @@ def compute_categories(runbooks):
     # Add empty categories so templates can iterate all
     for slug, name in CATEGORY_MAP.items():
         if slug not in cats:
-            cats[slug] = {"slug": slug, "name": name, "count": 0, "runbooks": []}
+            cats[slug] = {
+                "slug": slug,
+                "name": name,
+                "count": 0,
+                "planned_count": 0,
+                "runbooks": [],
+            }
+
+    # Count planned (not-yet-published) runbooks per category
+    for entry in planned or []:
+        slug = entry.get("category", "")
+        if slug in cats:
+            cats[slug]["planned_count"] += 1
+
+    # Compute total and percentage for each category
+    for slug, cat in cats.items():
+        cat["total"] = cat["count"] + cat["planned_count"]
+        cat["pct"] = round(cat["count"] / cat["total"] * 100) if cat["total"] > 0 else 0
+
     return cats
 
 
@@ -242,7 +261,7 @@ def define_env(env):
     planned = load_planned_runbooks(published_ids)
 
     all_runbooks = sorted(runbooks + planned, key=lambda r: r["id"])
-    categories = compute_categories(runbooks)
+    categories = compute_categories(runbooks, planned)
 
     # Distinct tactics across all runbooks (published + planned)
     all_tactics = []
