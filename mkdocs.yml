@@ -97,6 +97,7 @@ nav:
           - Atypical Travel: runbooks/identity/atypical-travel.md
           - Suspicious Service Principal Activity: runbooks/identity/suspicious-service-principal-activity.md
           - Consent Grant Attack: runbooks/identity/consent-grant-attack.md
+          - Suspicious MFA Method Registration: runbooks/identity/suspicious-mfa-registration.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md

@@ -95,3 +95,18 @@
     - "Credential Access"
     - "Collection"
     - "Exfiltration"
+
+- id: RB-0012
+  title: "Suspicious MFA Method Registration"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects suspicious MFA authentication method registrations on compromised
+    accounts where attackers register their own MFA method to maintain persistent
+    access that survives password resets.
+  tactics:
+    - "Persistence"
+    - "Privilege Escalation"
+    - "Defense Evasion"
+    - "Credential Access"
