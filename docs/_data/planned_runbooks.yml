@@ -156,3 +156,18 @@
     - "Persistence"
     - "Privilege Escalation"
     - "Credential Access"
+
+- id: RB-0016
+  title: "Smart Lockout Triggered"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects Azure AD Smart Lockout events indicating active brute force or
+    credential stuffing attacks. Covers lockout trigger analysis, attack source
+    infrastructure profiling, post-lockout success detection, and coordinated
+    multi-account campaign identification.
+  tactics:
+    - "Credential Access"
+    - "Initial Access"
+    - "Defense Evasion"

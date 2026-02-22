@@ -101,6 +101,7 @@ nav:
           - Privileged Role Assignment Anomaly: runbooks/identity/privileged-role-assignment.md
           - AiTM Phishing / Anomalous Token: runbooks/identity/aitm-phishing-detection.md
           - Conditional Access Manipulation: runbooks/identity/conditional-access-manipulation.md
+          - Smart Lockout Triggered: runbooks/identity/smart-lockout-triggered.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md
