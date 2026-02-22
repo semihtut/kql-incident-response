@@ -106,6 +106,11 @@ nav:
           - Self-Service Password Reset Abuse: runbooks/identity/sspr-abuse.md
           - Inactive Account Reactivation: runbooks/identity/inactive-account-reactivation.md
           - Excessive User/Group Enumeration: runbooks/identity/excessive-user-group-enumeration.md
+          - Session Token Theft / Cookie Hijacking: runbooks/identity/session-token-theft.md
+          - Security Default Disablement: runbooks/identity/security-default-disablement.md
+          - Break-Glass Account Activity: runbooks/identity/break-glass-account-activity.md
+          - Azure AD Connect Sync Account Abuse: runbooks/identity/aad-connect-sync-abuse.md
+          - Federated Trust Modification (Golden SAML): runbooks/identity/federated-trust-modification.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md
