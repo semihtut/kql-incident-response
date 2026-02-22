@@ -88,6 +88,11 @@ log_sources:
     license: "M365 E3+"
     required: true
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -1018,6 +1023,133 @@ SigninLogs
 - If campaign detected → Escalate to security leadership, activate incident response plan
 - Cross-reference affected users' roles — are they privileged accounts?
 - Check if any affected user's credentials appeared in recent dark web dumps (correlate with RB-0003)
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the MFA push activity represents a genuine anomaly. UEBA's ML engine tracks the volume and pattern of operations per user — the `UncommonHighVolumeOfOperations` insight directly maps to MFA fatigue detection. Additionally, if the attacker bypassed MFA and gained access, UEBA will flag any post-access activity from the attacker's IP/location as anomalous.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: MFA Activity Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for MFA Fatigue
+// Purpose: Check if UEBA flagged the burst of MFA requests as
+//          anomalous and assess the attacker's source IP/location
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T03:15:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Volume anomaly — directly maps to MFA push spam
+    UncommonHighVolume = tobool(ActivityInsights.UncommonHighVolumeOfOperations),
+    // Action anomaly — is this activity pattern unusual for this user?
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Source analysis — attacker's IP/location
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    // Device analysis
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    // Threat intel on source IP
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Approval Behavioral Deviation
+
+```kql
+// ============================================================
+// Query 8B: Post-MFA-Approval Behavioral Anomalies
+// Purpose: If the user approved an MFA push (Step 3), check if
+//          post-approval activity shows attacker behavior patterns
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T03:15:00Z);
+let TargetUser = "user@contoso.com";
+let PostApprovalWindow = 4h;
+BehaviorAnalytics
+| where TimeGenerated between (AlertTime .. (AlertTime + PostApprovalWindow))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    // Volume anomalies
+    HighVolumeFlags = countif(tobool(ActivityInsights.UncommonHighVolumeOfOperations)),
+    // First-time activities (attacker exploration)
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    FirstTimeResourceCount = countif(tobool(ActivityInsights.FirstTimeUserAccessedResource)),
+    FirstTimeAppCount = countif(tobool(ActivityInsights.FirstTimeUserUsedApp)),
+    // Uncommon among peers
+    UncommonActionAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UncommonAppAmongPeers = countif(tobool(ActivityInsights.AppUncommonlyUsedAmongPeers)),
+    // IP/location diversity in post-approval window
+    UniqueIPs = dcount(SourceIPAddress),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    ActivityTypes = make_set(ActivityType),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    AttackerSignals = HighVolumeFlags + FirstTimeActionCount + FirstTimeResourceCount
+        + FirstTimeAppCount + UncommonActionAmongPeers
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **UncommonHighVolumeOfOperations**: This is the **most direct UEBA signal** for MFA fatigue — UEBA's ML engine detects burst patterns that exceed the user's normal operation volume. If `true`, UEBA independently confirms abnormal activity volume
+- **Post-approval analysis (Query 8B)**: Focus on the time window AFTER the MFA push was approved. Multiple "first time" flags in a 4-hour window strongly suggest an attacker exploring the environment
+- **AttackerSignals count**: Sum of suspicious indicators — `>= 3` signals in the post-approval window is strong evidence
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| UncommonHighVolume | true — burst exceeds ML baseline | false — normal volume |
+| FirstTimeISP | true — attacker's ISP never seen | false — known ISP |
+| FirstTimeCountry | true — attacker from new country | false — user's country |
+| Post-approval FirstTimeAction | Multiple first-time actions | No first-time actions |
+| Post-approval FirstTimeResource | Accessing new resources | Normal resource access |
+| Post-approval FirstTimeApp | Using new applications | Usual applications |
+| AttackerSignals (4h) | >= 3 — strong attacker pattern | 0 — clean post-approval |
+| BlastRadius | High — privileged account | Low — standard user |
+| ActivityTypes (post-approval) | ResourceAccess, ElevateAccess | LogOn only |
+
+**Decision guidance:**
+
+- **UncommonHighVolumeOfOperations = true + InvestigationPriority >= 7** → UEBA independently confirms the MFA push spam as anomalous. Very high confidence of active attack
+- **Post-approval AttackerSignals >= 3** → Attacker gained access and is actively exploring. Multiple first-time actions/resources/apps in a short window is a hallmark of post-compromise activity. Proceed to Containment immediately
+- **FirstTimeISP + FirstTimeCountry in post-approval** → The MFA-approved session originated from a completely new location. This is NOT the legitimate user
+- **InvestigationPriority < 4 + no post-approval anomalies** → MFA denials may have been accidental (user pressing wrong button) or from a legitimate MFA re-enrollment. Combined with clean findings from Steps 1-7, consider closing as false positive
+- **BlastRadius = High** → Privileged account under MFA fatigue attack requires immediate escalation regardless of other indicators
 
 ---
 

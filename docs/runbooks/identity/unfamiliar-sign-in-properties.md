@@ -1691,6 +1691,140 @@ BehaviorAnalytics
 
 ---
 
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to provide comprehensive behavioral context for the unfamiliar sign-in. While Query 6C provides a quick UEBA check within the IP reputation step, this step performs an expanded analysis — including user account status (dormant, new, blast radius), peer group deviation, and post-sign-in behavioral anomalies. UEBA's ML-driven 90-day country baseline and 30-day ISP/device baselines provide deeper historical context than manual log analysis.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 3 and the quick UEBA check in Query 6C. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: Comprehensive Behavioral Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Comprehensive Behavioral Assessment
+// Purpose: Expanded UEBA analysis beyond Query 6C — includes
+//          account status, peer group comparison, and full
+//          activity insight extraction
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // ISP analysis
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    // Country analysis
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    // Device/Browser analysis
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // Action anomalies
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // User context — account status
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Behavioral Anomaly Summary and Risk Score
+
+```kql
+// ============================================================
+// Query 8B: Behavioral Anomaly Summary
+// Purpose: Aggregate UEBA anomaly signals to build a composite
+//          risk picture for the unfamiliar sign-in investigation
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 14d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    AvgPriority = avg(InvestigationPriority),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius)),
+    IsDormant = take_any(tobool(UsersInsights.IsDormantAccount)),
+    IsNew = take_any(tobool(UsersInsights.IsNewAccount)),
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    FirstTimeDeviceCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromDevice)),
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    UncommonAmongPeersCount = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AvgPriority = round(AvgPriority, 1),
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    RiskLevel = case(
+        IsDormant == true and MaxPriority >= 4, "CRITICAL — Dormant account with anomalies",
+        MaxPriority >= 7, "HIGH — Strong behavioral deviation",
+        BlastRadius == "High" and MaxPriority >= 4, "HIGH — Privileged account with anomalies",
+        MaxPriority >= 4, "MEDIUM — Moderate anomalies detected",
+        "LOW — Activity within normal range"
+    )
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **Peer group comparison**: `ISPUncommonAmongPeers` and `CountryUncommonAmongPeers` add organizational context that individual user analysis cannot provide
+- **Account status flags**: `IsDormantAccount` and `IsNewAccount` are critical triage signals — dormant accounts with unfamiliar sign-ins are near-certain compromises
+- **BlastRadius**: Privileged accounts require escalation regardless of anomaly score
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| FirstTimeISP | true — ISP never seen for user | false — known ISP |
+| ISPUncommonAmongPeers | true — peers don't use this ISP | false — common in peer group |
+| FirstTimeCountry | true — new country for user | false — known location |
+| CountryUncommonAmongPeers | true — peers don't connect from there | false — common travel destination |
+| IsDormantAccount | true — account inactive 180+ days | false — active account |
+| BlastRadius | High — privileged account | Low — standard user |
+| AnomalyRatio (14d) | > 20% — frequent anomalies | < 5% — rare anomalies |
+| ThreatIndicator | Botnet, C2, Proxy | Empty |
+| RiskLevel | CRITICAL or HIGH | LOW |
+
+**Decision guidance:**
+
+- **RiskLevel = CRITICAL (dormant account)** → Dormant account with unfamiliar sign-in is near-certain credential compromise. Proceed to Containment immediately
+- **InvestigationPriority >= 7 + ISPUncommonAmongPeers + CountryUncommonAmongPeers** → Strong behavioral deviation with no organizational precedent. Very high confidence of compromise
+- **InvestigationPriority >= 4 + BlastRadius = High** → Moderate anomaly on a privileged account. Escalate even with partial indicators
+- **InvestigationPriority < 4 + familiar ISP/country** → Activity within normal behavioral range. Combined with Step 7 classification, likely benign
+- **ThreatIndicator populated** → Source IP has known malicious associations. Immediate escalation regardless of other findings
+
+---
+
 ## 6. Containment Playbook
 
 Execute in this order. IMPORTANT: Collect evidence (Section 7 checklist) BEFORE taking containment actions that could alert the attacker or destroy evidence.

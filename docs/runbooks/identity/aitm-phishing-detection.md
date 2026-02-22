@@ -82,6 +82,11 @@ log_sources:
     license: "Office 365 E1+"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -1028,6 +1033,132 @@ TokenAnomalies
 - Block attacker IP ranges at network level
 - Search for and quarantine phishing emails across the organization
 - Begin containment for ALL affected users simultaneously
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the suspected AiTM/token theft session shows anomalous behavioral patterns. AiTM phishing attacks result in sign-ins from the attacker's infrastructure — UEBA's ISP/country/device first-time detection is particularly effective here because the stolen token will be replayed from a location that's completely new for the user.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: Token Replay Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for AiTM/Token Theft
+// Purpose: Check if UEBA flagged the suspected session as
+//          anomalous — attacker's replayed token should trigger
+//          first-time ISP/country/device detections
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T10:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // ISP/Country — attacker's proxy will be a new ISP/country
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    // Device/Browser — stolen token used from attacker's device
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // Application access — attacker typically targets email/SharePoint
+    FirstTimeApp = tobool(ActivityInsights.FirstTimeUserUsedApp),
+    AppUncommonAmongPeers = tobool(ActivityInsights.AppUncommonlyUsedAmongPeers),
+    // Action anomalies — post-compromise BEC actions
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Compromise BEC Activity Anomalies
+
+```kql
+// ============================================================
+// Query 8B: Post-AiTM BEC Activity Behavioral Analysis
+// Purpose: Assess whether post-compromise email/data access
+//          activities deviate from user's established baseline
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T10:30:00Z);
+let TargetUser = "user@contoso.com";
+let PostCompromiseWindow = 12h;
+BehaviorAnalytics
+| where TimeGenerated between (AlertTime .. (AlertTime + PostCompromiseWindow))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    FirstTimeResourceCount = countif(tobool(ActivityInsights.FirstTimeUserAccessedResource)),
+    FirstTimeAppCount = countif(tobool(ActivityInsights.FirstTimeUserUsedApp)),
+    UncommonActionAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UncommonAppAmongPeers = countif(tobool(ActivityInsights.AppUncommonlyUsedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    ActivityTypes = make_set(ActivityType),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius)),
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    BECSignals = FirstTimeActionCount + FirstTimeResourceCount + FirstTimeAppCount
+        + UncommonActionAmongPeers + UncommonAppAmongPeers
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **ISP/Country first-time flags**: AiTM attacks ALWAYS result in token replay from the attacker's infrastructure. `FirstTimeISP = true` AND `FirstTimeCountry = true` for a token-based session is an extremely strong indicator of AiTM compromise
+- **Post-compromise window**: Default 12h. AiTM attackers often act fast (mailbox rules, data exfiltration within hours). Expand to 24h for slower campaigns
+- **BECSignals count**: Sum of first-time and uncommon activities post-compromise. `>= 3` signals strongly indicate active BEC activity
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| FirstTimeISP | true — token replayed from new ISP | false — user's ISP |
+| FirstTimeCountry | true — attacker in different country | false — user's country |
+| FirstTimeDevice | true — attacker's device | false — user's device |
+| FirstTimeApp | true — accessing unfamiliar apps | false — usual apps |
+| Post-compromise BECSignals | >= 3 — active BEC underway | 0 — no anomalous actions |
+| ActionUncommonAmongPeers | true — mail rule/forwarding unusual | false — normal for role |
+| UniqueCountries (12h) | 2+ — concurrent multi-country | 1 — single location |
+| BlastRadius | High — privileged/exec account | Low — standard user |
+| ThreatIndicator | Proxy, VPN, Hosting | Empty |
+
+**Decision guidance:**
+
+- **FirstTimeISP + FirstTimeCountry + FirstTimeDevice = all true** → Near-certain AiTM token replay. The stolen session cookie is being used from infrastructure the user has never touched. Proceed to Containment immediately
+- **Post-compromise BECSignals >= 3** → Attacker is actively performing BEC operations (mail rules, data access, forwarding). Revoke all sessions and proceed to Containment
+- **Multiple countries in 12h window** → Concurrent sessions from different countries confirms token theft — legitimate user cannot be in two countries simultaneously
+- **InvestigationPriority < 4 + all flags false** → Token anomaly may be a false positive from VPN switching or mobile network handoff. Combined with clean findings from Steps 1-7, consider closing
+- **BlastRadius = High** → Executive or privileged account compromised via AiTM. Maximum priority escalation
 
 ---
 

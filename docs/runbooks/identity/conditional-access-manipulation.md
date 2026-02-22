@@ -63,6 +63,11 @@ log_sources:
     license: "Azure Subscription"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -939,6 +944,69 @@ AuditLogs
 - Use the attack chain to guide complete remediation (address ALL phases)
 - For each phase, follow the corresponding runbook (RB-0013, RB-0012, RB-0011, etc.)
 - Brief SOC leadership on the full attack chain scope
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the Conditional Access policy change is anomalous. UEBA's `UnusualNumberOfAADConditionalAccessFailures` directly tracks CA-related anomalies, while `ActionUncommonlyPerformedAmongPeers` reveals if policy modifications are normal for the actor's role.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4.
+
+#### Query 8A: CA Policy Change Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for CA Manipulation
+// Purpose: Check if the CA policy change and related CA failures
+//          are flagged as anomalous by UEBA
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T16:00:00Z);
+let TargetUser = "admin@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // CA-specific anomaly
+    UnusualCAFailures = tobool(ActivityInsights.UnusualNumberOfAADConditionalAccessFailures),
+    // Action analysis
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Source
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 |
+| UnusualCAFailures | true — abnormal CA failure count | false |
+| FirstTimeAction | true — never modified CA policies | false — regular admin |
+| ActionUncommonAmongPeers | true — peers don't modify CA | false — normal for security team |
+| FirstTimeCountry | true — change from unusual location | false — expected location |
+
+**Decision guidance:**
+
+- **UnusualCAFailures = true + FirstTimeAction = true** → Actor is both triggering unusual CA failures AND modifying CA policies for the first time. High confidence of compromise
+- **ActionUncommonAmongPeers = false** → CA modification is normal for this role. Likely a legitimate change
+- **FirstTimeCountry = true + policy disabling MFA** → CA manipulation from unusual location that weakens security. Immediate escalation
 
 ---
 

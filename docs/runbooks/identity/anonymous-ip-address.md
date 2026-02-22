@@ -100,6 +100,11 @@ log_sources:
     license: "Sentinel + TI feeds"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -1143,6 +1148,137 @@ SigninLogs
 | Org usage | Single user or credential spray pattern | Multiple org users (shared VPN) |
 | Failed sign-ins | High failure rate from this IP | No failed sign-ins |
 | Time range | First time seen in organization | Seen regularly over weeks |
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to determine whether the anonymous IP sign-in represents genuinely anomalous behavior or fits within the user's established behavioral patterns. UEBA's ML-based anomaly scoring provides context that raw logs cannot — particularly whether this ISP/country combination is new for the user and their peer group.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 3. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: User Behavioral Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Behavioral Anomaly Assessment
+// Purpose: Check if UEBA has flagged anomalous ISP/country/device
+//          usage for this user around the alert time
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // ISP analysis — critical for anonymous IP investigation
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    ISPUncommonInTenant = tobool(ActivityInsights.ISPUncommonlyUsedInTenant),
+    // Country analysis
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    // Device/Browser analysis
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Threat intel from IP
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Peer Group ISP Comparison
+
+```kql
+// ============================================================
+// Query 8B: Peer Group ISP and Country Usage
+// Purpose: Compare user's ISP/country patterns against their
+//          organizational peer group to determine if the
+//          anonymous IP usage is normal for similar roles
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 30d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. AlertTime)
+| where UserPrincipalName =~ TargetUser
+| where ActivityType == "LogOn"
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    AvgPriority = avg(InvestigationPriority),
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    UncommonISPAmongPeersCount = countif(tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| project
+    TotalActivities,
+    HighAnomalyCount,
+    MediumAnomalyCount,
+    MaxPriority,
+    AvgPriority = round(AvgPriority, 1),
+    FirstTimeISPCount,
+    FirstTimeCountryCount,
+    UncommonISPAmongPeersCount,
+    UniqueIPs,
+    UniqueCountries,
+    Countries,
+    ThreatIntelHits,
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1)
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly (recommended for triage), `>= 4` = medium anomaly (broader coverage), `< 4` = likely normal
+- **ISP analysis**: If `FirstTimeISP = true` AND `ISPUncommonAmongPeers = true`, the anonymous proxy is almost certainly not legitimate business use
+- **Country analysis**: `FirstTimeCountry = true` for a user who normally signs in from a single country is a strong indicator
+- **Dormant/New accounts**: `IsDormantAccount = true` signing in via anonymous IP is HIGH risk — likely credential theft
+- **ThreatIntelIndicator**: If populated (Botnet, C2, Malware, etc.), the IP has known malicious associations
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| FirstTimeISP | true — never used this ISP | false — ISP seen before |
+| ISPUncommonAmongPeers | true — peers don't use this ISP | false — common ISP in peer group |
+| FirstTimeCountry | true — new country for user | false — known travel location |
+| IsDormantAccount | true — account was inactive 180+ days | false — active account |
+| BlastRadius | High — admin or privileged account | Low — standard user |
+| ThreatIntelIndicator | Botnet, C2, Proxy, Tor | Empty |
+| AnomalyRatio (30d) | > 20% — frequent anomalies | < 5% — rare anomalies |
+
+**Decision guidance:**
+
+- **UEBA InvestigationPriority >= 7 + FirstTimeISP + FirstTimeCountry** → Very high confidence of malicious activity. Proceed to Containment
+- **InvestigationPriority >= 4 + ISPUncommonAmongPeers** → Suspicious. Correlate with Steps 1-7 findings for final determination
+- **InvestigationPriority < 4 + ISP seen before** → Likely legitimate anonymous browsing (VPN user). Consider closing as false positive
+- **IsDormantAccount = true** → Regardless of priority score, treat as HIGH risk. Dormant accounts using anonymous IPs strongly suggest credential compromise
+- **ThreatIntelIndicator populated** → IP has known malicious associations. Immediate escalation regardless of other findings
 
 ---
 

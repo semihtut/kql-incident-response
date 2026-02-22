@@ -68,6 +68,11 @@ log_sources:
     license: "Entra ID Free"
     required: true
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -635,6 +640,137 @@ SigninLogs
 - **Multiple users from same ASN with "Burst" pattern** = coordinated campaign using same infrastructure
 - **AccessPattern = "Consistent - Likely Legitimate"** = probably developers or cloud admins — still confirm
 - **Shared SourceIPs across different users** = same attacker IP accessing multiple accounts
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the hosting provider/VPS sign-in is anomalous. UEBA provides three levels of ISP comparison — user-level (`ISPUncommonlyUsedByUser`), peer-level (`ISPUncommonlyUsedAmongPeers`), and tenant-level (`ISPUncommonlyUsedInTenant`) — enabling precise determination of whether a hosting provider ISP is truly suspicious or commonly used in the organization.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: ISP Risk Assessment via UEBA
+
+```kql
+// ============================================================
+// Query 8A: UEBA Three-Level ISP Risk Assessment
+// Purpose: Assess ISP risk at user, peer group, and tenant
+//          levels — critical for distinguishing legitimate
+//          cloud infrastructure use from attacker hosting
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T06:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Three-level ISP analysis — core of this runbook
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    ISPUncommonInTenant = tobool(ActivityInsights.ISPUncommonlyUsedInTenant),
+    // Country correlation
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    // Device/Browser
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    // Threat intel — critical for hosting IPs
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: ISP Usage Pattern Summary
+
+```kql
+// ============================================================
+// Query 8B: User ISP Usage Pattern Summary
+// Purpose: Aggregate ISP anomaly signals to build a complete
+//          picture of the user's infrastructure usage patterns
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T06:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 30d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. AlertTime)
+| where UserPrincipalName =~ TargetUser
+| where ActivityType == "LogOn"
+| summarize
+    TotalLogons = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    AvgPriority = avg(InvestigationPriority),
+    // ISP anomaly counts
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    UncommonISPForUserCount = countif(tobool(ActivityInsights.ISPUncommonlyUsedByUser)),
+    UncommonISPAmongPeersCount = countif(tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers)),
+    UncommonISPInTenantCount = countif(tobool(ActivityInsights.ISPUncommonlyUsedInTenant)),
+    // Country diversity
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    // Threat intel
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AvgPriority = round(AvgPriority, 1),
+    ISPRiskScore = FirstTimeISPCount + UncommonISPForUserCount + UncommonISPAmongPeersCount + (UncommonISPInTenantCount * 2),
+    ISPRiskLevel = case(
+        UncommonISPInTenantCount > 0 and ThreatIntelHits > 0, "CRITICAL — Unknown ISP with threat intel",
+        UncommonISPInTenantCount > 0, "HIGH — ISP never seen in tenant",
+        UncommonISPAmongPeersCount > 0, "MEDIUM — ISP unusual for peer group",
+        UncommonISPForUserCount > 0, "LOW — ISP unusual for user only",
+        "MINIMAL — ISP within normal patterns"
+    )
+```
+
+**Tuning Guidance:**
+
+- **Three-level ISP analysis**:
+    - `ISPUncommonlyUsedByUser = true` only → ISP is unusual for this specific user but may be used by peers (e.g., user on travel using a different cellular carrier)
+    - `ISPUncommonlyUsedAmongPeers = true` → ISP is unusual for the user's entire peer group. Higher confidence of suspicious activity
+    - `ISPUncommonlyUsedInTenant = true` → ISP has NEVER been seen across the entire organization. **Highest risk** — hosting provider IPs from attacker infrastructure
+- **ThreatIntelIndicator**: Combined with ISP analysis, if a hosting provider IP also has threat intel associations (Botnet, C2, Proxy), this is near-certain malicious activity
+- **ISPRiskScore**: Composite score weighting tenant-level anomalies higher. `>= 5` = high risk, `3-4` = medium, `< 3` = low
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| ISPUncommonInTenant | true — ISP never seen in org | false — ISP used by others |
+| ISPUncommonAmongPeers | true — peers don't use this ISP | false — common in peer group |
+| ISPUncommonForUser | true — new ISP for user | false — user's regular ISP |
+| FirstTimeISP | true — never used this ISP | false — seen before |
+| FirstTimeCountry | true — hosting IP in new country | false — known location |
+| ThreatIndicator | Botnet, C2, Proxy, Hosting | Empty |
+| ISPRiskLevel | CRITICAL or HIGH | MINIMAL or LOW |
+| BlastRadius | High — privileged account | Low — standard user |
+
+**Decision guidance:**
+
+- **ISPUncommonInTenant = true + ThreatIndicator populated** → **CRITICAL**: ISP never seen in the organization AND has known malicious associations. Near-certain malicious hosting infrastructure. Proceed to Containment
+- **ISPUncommonAmongPeers = true + FirstTimeCountry = true** → Hosting provider from a country where neither the user nor peers operate. High confidence of attacker infrastructure
+- **ISPUncommonForUser = true + ISPUncommonAmongPeers = false** → ISP is new for this user but common among peers. May be legitimate (e.g., user accessing from a peer's office or shared corporate VPN)
+- **ISPRiskLevel = MINIMAL** → UEBA confirms the hosting ISP is within normal patterns. May be a cloud-based development tool, CI/CD pipeline, or legitimate SaaS proxy. Combined with clean findings from Steps 1-7, consider closing
+- **BlastRadius = High** → Any suspicious hosting ISP sign-in on a privileged account requires immediate escalation
 
 ---
 

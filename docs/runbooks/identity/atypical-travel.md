@@ -889,6 +889,116 @@ CountrySignIns
 - `HIGH` (single user, new country for org) → Continue with single-user containment per Section 6
 - `LOW` (isolated) → Standard single-user investigation, containment based on Steps 1-6 findings
 
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the atypical travel pattern is genuinely anomalous. UEBA's geographic baseline covers 90 days of country-level data and 30 days for ISP/device data — providing deeper historical context than sign-in log analysis alone. The `CountryUncommonlyConnectedFromAmongPeers` insight is particularly valuable for determining if travel to the flagged location is common for users in similar roles.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4.
+
+#### Query 8A: Geographic Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Geographic Anomaly Assessment
+// Purpose: Check UEBA's country/ISP/device first-time and
+//          uncommon flags to validate the atypical travel alert
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T09:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Country analysis — core of atypical travel
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    CountryUncommonInTenant = tobool(ActivityInsights.CountryUncommonlyConnectedFromInTenant),
+    // ISP analysis
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    // Device analysis
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Travel Pattern Summary
+
+```kql
+// ============================================================
+// Query 8B: User Geographic Mobility Summary via UEBA
+// Purpose: Aggregate geographic anomaly signals over 30 days
+//          to understand the user's travel frequency
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T09:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 30d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. AlertTime)
+| where UserPrincipalName =~ TargetUser
+| where ActivityType == "LogOn"
+| summarize
+    TotalLogons = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MaxPriority = max(InvestigationPriority),
+    AvgPriority = avg(InvestigationPriority),
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    UncommonCountryCount = countif(tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser)),
+    UncommonCountryAmongPeersCount = countif(tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers)),
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    UniqueIPs = dcount(SourceIPAddress),
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AvgPriority = round(AvgPriority, 1),
+    TravelFrequency = case(
+        UniqueCountries >= 5, "Frequent traveler",
+        UniqueCountries >= 3, "Occasional traveler",
+        UniqueCountries == 2, "Rare traveler",
+        "Single location"
+    )
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 |
+| FirstTimeCountry | true — never connected from this country | false |
+| CountryUncommonAmongPeers | true — peers don't travel there | false — peers travel there |
+| CountryUncommonInTenant | true — no one connects from there | false — common destination |
+| FirstTimeISP | true — new ISP in new country | false — known ISP |
+| TravelFrequency | Single location user suddenly traveling | Frequent traveler |
+| ThreatIndicator | Populated — VPN/proxy hosting | Empty |
+
+**Decision guidance:**
+
+- **FirstTimeCountry + CountryUncommonAmongPeers + CountryUncommonInTenant = all true** → Country never seen for user, peers, or org. Very high confidence of credential abuse from foreign infrastructure
+- **CountryUncommonAmongPeers = false** → Other users in similar roles travel to this country. Lower risk — likely legitimate business travel
+- **TravelFrequency = "Frequent traveler"** → User regularly connects from multiple countries. This alert is less significant
+- **TravelFrequency = "Single location" + FirstTimeCountry = true** → A user who has never traveled suddenly connecting from a new country. High suspicion
+
 ---
 
 ## 6. Containment Playbook

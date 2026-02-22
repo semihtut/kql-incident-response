@@ -96,6 +96,11 @@ log_sources:
     license: "Sentinel + TI feeds"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -1234,6 +1239,146 @@ SigninLogs
 | TI match | Anomalous IP in threat intelligence feeds | IP not in TI feeds |
 | Org usage | IP never seen in organization | IP used by other org users (shared VPN) |
 | User count | Single user or no users | 10+ users (corporate IP) |
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess the leaked credential risk in behavioral context. UEBA provides critical insights that raw logs cannot — specifically whether the account is dormant (unused for 180+ days, making it a prime target), new (recently created), or high blast-radius (admin/privileged). Combined with activity anomaly detection, this step reveals whether post-leak sign-in activity deviates from the user's established baseline.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 3. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: User Risk Profile and Behavioral Anomalies
+
+```kql
+// ============================================================
+// Query 8A: UEBA Risk Profile for Leaked Credential User
+// Purpose: Assess user's behavioral risk profile — account status,
+//          blast radius, and post-leak anomalous activities
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Account risk context — critical for leaked credentials
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Geographic anomalies — post-leak attacker likely from new location
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    // ISP/Device anomalies
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    // Action anomalies — attacker may perform unusual operations
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Resource access anomalies
+    FirstTimeResource = tobool(ActivityInsights.FirstTimeUserAccessedResource),
+    ResourceUncommonForUser = tobool(ActivityInsights.ResourceUncommonlyAccessedByUser),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Leak Activity Anomaly Summary
+
+```kql
+// ============================================================
+// Query 8B: Post-Leak Behavioral Anomaly Summary
+// Purpose: Aggregate UEBA anomaly signals after the leak detection
+//          to identify patterns of attacker activity
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 14d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    AvgPriority = avg(InvestigationPriority),
+    // Account status (from most recent record)
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius)),
+    IsDormant = take_any(tobool(UsersInsights.IsDormantAccount)),
+    IsNew = take_any(tobool(UsersInsights.IsNewAccount)),
+    // First-time activity counts
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    FirstTimeResourceCount = countif(tobool(ActivityInsights.FirstTimeUserAccessedResource)),
+    // Uncommon activity counts
+    UncommonActionAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UncommonResourceForUser = countif(tobool(ActivityInsights.ResourceUncommonlyAccessedByUser)),
+    // IP diversity
+    UniqueIPs = dcount(SourceIPAddress),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    // Threat intel
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    RiskLevel = case(
+        IsDormant == true and MaxPriority >= 4, "CRITICAL — Dormant account with anomalies",
+        MaxPriority >= 7, "HIGH — Strong behavioral deviation",
+        BlastRadius == "High" and MaxPriority >= 4, "HIGH — Privileged account with anomalies",
+        MaxPriority >= 4, "MEDIUM — Moderate anomalies detected",
+        "LOW — Activity within normal range"
+    )
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **IsDormantAccount**: If `true`, this is a **critical finding** — a dormant account that suddenly activates after credential leak is a near-certain indicator of compromise
+- **BlastRadius**: Accounts with `High` blast radius (Global Admin, Exchange Admin, etc.) require immediate escalation regardless of anomaly score
+- **FirstTimeAction/FirstTimeResource**: Post-leak, the attacker often performs actions the legitimate user never has. Multiple "first time" flags in a short period is highly suspicious
+- **Peer comparison**: `ActionUncommonAmongPeers = true` means the action is unusual even for users in similar roles — not just unusual for this user
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| IsDormantAccount | true — inactive 180+ days, now active | false — regular user |
+| IsNewAccount | true — account < 30 days old | false — established account |
+| BlastRadius | High — privileged account | Low — standard user |
+| FirstTimeCountry | true — sign-in from new country | false — known location |
+| FirstTimeAction | true — performing new actions post-leak | false — normal actions |
+| FirstTimeResource | true — accessing new resources | false — usual resources |
+| ActionUncommonAmongPeers | true — unusual even for role peers | false — normal for role |
+| AnomalyRatio (14d) | > 30% — frequent anomalies | < 5% — rare anomalies |
+| RiskLevel | CRITICAL or HIGH | LOW |
+
+**Decision guidance:**
+
+- **IsDormantAccount = true** → Regardless of other findings, treat as **CRITICAL**. Dormant accounts with leaked credentials that suddenly activate are almost certainly compromised. Proceed immediately to Containment
+- **BlastRadius = High + InvestigationPriority >= 4** → Privileged account with anomalous behavior. Escalate immediately
+- **Multiple FirstTime flags + InvestigationPriority >= 7** → Strong evidence of attacker performing reconnaissance. The attacker is accessing resources and performing actions the real user never has
+- **InvestigationPriority < 4 + no FirstTime flags** → Activity is within normal behavioral range. Combined with clean findings from Steps 1-7, this may indicate the leaked credential was not exploited or was already rotated
+- **ThreatIntelHits > 0** → Source IP has known malicious associations. Immediate escalation
 
 ---
 

@@ -72,6 +72,11 @@ log_sources:
     license: "Azure Subscription + Diagnostic Settings"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -995,6 +1000,66 @@ RecentCredentialAdditions
 - For each CRITICAL/HIGH SP, run Steps 1-6 to investigate individually
 - If a common `InitiatedByUser` is found across multiple SPs, investigate that user account
 - If a common `InitiatedByIP` is found, block the IP immediately
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the service principal's activity pattern deviates from its established baseline. While UEBA primarily tracks user entities, service principal sign-ins logged via `AADServicePrincipalSignInLogs` can still generate `BehaviorAnalytics` entries for associated users who manage or created the service principal. This step checks the managing user's behavioral context.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. Note: UEBA has limited coverage for service principals — focus on the managing user's behavioral patterns.
+
+#### Query 8A: Managing User Behavioral Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Assessment for Service Principal's Managing User
+// Purpose: Check if the user who manages/created the service
+//          principal shows anomalous behavior patterns
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T12:00:00Z);
+let TargetUser = "admin@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    FirstTimeResource = tobool(ActivityInsights.FirstTimeUserAccessedResource),
+    ResourceUncommonForUser = tobool(ActivityInsights.ResourceUncommonlyAccessedByUser),
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 |
+| FirstTimeAction | true — new SP management action | false — regular DevOps task |
+| ActionUncommonAmongPeers | true — peers don't manage SPs | false — normal for team |
+| FirstTimeResource | true — accessing new resources | false — routine |
+| IsDormantAccount | true — dormant admin managing SP | false |
+
+**Decision guidance:**
+
+- **Managing user InvestigationPriority >= 7 + FirstTimeAction** → Compromised admin creating/modifying service principals. High risk of persistence mechanism
+- **ActionUncommonAmongPeers = false** → SP management is normal for this user's role (DevOps/platform team). Lower concern
+- **IsDormantAccount = true** → Dormant admin managing SPs is critical — account likely compromised
 
 ---
 

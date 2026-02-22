@@ -66,6 +66,11 @@ log_sources:
     license: "Microsoft Sentinel"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -671,6 +676,71 @@ RecentActiveAccounts
 - **Same RecentIPs across multiple dormant accounts** = Single attacker activating multiple stale accounts
 - **HasPriorActivity = false** = Account was never used — possible test/shadow account being abused
 - **DaysInactive > 365** = Over a year inactive — should definitely be disabled
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess the reactivated dormant account's behavioral context. This runbook is uniquely aligned with UEBA — the `IsDormantAccount` insight directly maps to the investigation target. UEBA's baseline for dormant accounts will show maximum anomaly since there's no recent behavioral baseline to compare against, making every post-reactivation action a "first time" event.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4.
+
+#### Query 8A: Dormant Account Behavioral Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Assessment for Reactivated Dormant Account
+// Purpose: Assess UEBA signals for a dormant account that has
+//          become active — every action is likely "first time"
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T08:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeApp = tobool(ActivityInsights.FirstTimeUserUsedApp),
+    FirstTimeResource = tobool(ActivityInsights.FirstTimeUserAccessedResource),
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 (unlikely for dormant) |
+| IsDormantAccount | true — confirmed dormant | Unexpected if false |
+| FirstTimeISP + FirstTimeCountry | true — unknown infrastructure | ISP matches org patterns |
+| ISPUncommonAmongPeers | true — infrastructure not used by peers | false — org ISP |
+| FirstTimeAction + FirstTimeApp | Multiple first-time activities | Expected for reactivation |
+| BlastRadius | High — privileged dormant account | Low |
+| ThreatIndicator | Populated — malicious infrastructure | Empty |
+
+**Decision guidance:**
+
+- **IsDormantAccount = true + ISPUncommonAmongPeers = true + ThreatIndicator populated** → Dormant account reactivated from malicious infrastructure. Near-certain credential compromise. Proceed to Containment immediately
+- **IsDormantAccount = true + ISPUncommonAmongPeers = true** → Even without threat intel, unknown infrastructure accessing a dormant account is high risk
+- **IsDormantAccount = true + ISP matches org patterns** → Could be legitimate reactivation (employee return, seasonal worker). Verify with HR/manager
+- **BlastRadius = High** → Dormant privileged account reactivation always requires immediate investigation regardless of other indicators
 
 ---
 

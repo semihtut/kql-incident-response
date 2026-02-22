@@ -75,6 +75,11 @@ log_sources:
     license: "Microsoft Sentinel"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -1015,6 +1020,123 @@ AuditLogs
 - Remove any unverified permanent assignments immediately
 - Review PIM configuration to ensure just-in-time access is enforced
 - Conduct a full privileged access review across the organization
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the privileged role assignment is anomalous. UEBA's `BlastRadius` insight reveals the organizational impact of the target user, while `FirstTimeUserPerformedAction` indicates whether the assigning actor has ever performed this type of privilege escalation before. Peer group comparison reveals if role assignments are normal for the actor's organizational position.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: Role Assignment Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for Role Assignment
+// Purpose: Check if the actor's privilege escalation activity
+//          is anomalous and assess the target user's blast radius
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Action analysis — role assignment as an action
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    ActionUncommonInTenant = tobool(ActivityInsights.ActionUncommonlyPerformedInTenant),
+    // Resource access
+    FirstTimeResource = tobool(ActivityInsights.FirstTimeUserAccessedResource),
+    ResourceUncommonForUser = tobool(ActivityInsights.ResourceUncommonlyAccessedByUser),
+    // Source anomalies
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    // User context — blast radius is critical here
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Escalation Activity Analysis
+
+```kql
+// ============================================================
+// Query 8B: Post-Privilege-Escalation Activity Anomalies
+// Purpose: Detect anomalous activity after the role was assigned
+//          — attacker may immediately abuse new privileges
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:00:00Z);
+let TargetUser = "user@contoso.com";
+let PostEscalationWindow = 12h;
+BehaviorAnalytics
+| where TimeGenerated between (AlertTime .. (AlertTime + PostEscalationWindow))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    ElevateAccessCount = countif(ActivityType == "ElevateAccess"),
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    FirstTimeResourceCount = countif(tobool(ActivityInsights.FirstTimeUserAccessedResource)),
+    UncommonActionAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    Countries = make_set(SourceIPLocation),
+    ActivityTypes = make_set(ActivityType),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    EscalationSignals = ElevateAccessCount + FirstTimeActionCount + FirstTimeResourceCount + UncommonActionAmongPeers
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **FirstTimeAction**: If the actor has NEVER performed a role assignment before (`FirstTimeAction = true`), this is highly suspicious — especially if combined with high InvestigationPriority
+- **ActionUncommonAmongPeers**: Role assignments are typically performed by IT admins. If the actor's peer group doesn't normally assign roles, this is a strong indicator
+- **Post-escalation ElevateAccess**: Multiple `ElevateAccess` activity types after the role assignment indicate the attacker is chaining privilege escalations
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| FirstTimeAction | true — actor never assigned roles | false — regular admin task |
+| ActionUncommonAmongPeers | true — peers don't assign roles | false — normal for admin role |
+| ActionUncommonInTenant | true — rare action across org | false — common admin operation |
+| BlastRadius | High — target is privileged | Low — standard user |
+| Post-escalation ElevateAccess | Multiple privilege uses | None |
+| Post-escalation FirstTimeResource | Accessing new resources | Normal resource access |
+| IsDormantAccount | true — dormant account escalated | false — active account |
+| FirstTimeCountry | true — from unusual location | false — expected location |
+
+**Decision guidance:**
+
+- **FirstTimeAction = true + ActionUncommonAmongPeers = true** → The actor is performing a role assignment for the first time, and this action is unusual for their peer group. High confidence of unauthorized escalation. Proceed to Containment
+- **BlastRadius = High + InvestigationPriority >= 7** → Target account has high organizational impact AND the assignment is highly anomalous. Maximum priority escalation
+- **Post-escalation EscalationSignals >= 3** → Attacker is chaining privilege escalations. Multiple first-time actions indicate abuse of newly granted permissions
+- **InvestigationPriority < 4 + ActionUncommonAmongPeers = false** → Normal administrative operation. Combined with clean findings from Steps 1-7, likely a legitimate PIM activation or routine role assignment
+- **IsDormantAccount = true** → Dormant account receiving privileged role is critical — dormant accounts should not be escalated
 
 ---
 

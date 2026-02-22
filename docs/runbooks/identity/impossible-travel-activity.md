@@ -1342,6 +1342,136 @@ BehaviorAnalytics
 
 ---
 
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to provide comprehensive behavioral context for the impossible travel alert. While Query 7C provides a quick UEBA check within the IP reputation step, this step performs an expanded analysis — including geographic mobility profiling, peer group travel patterns, and post-sign-in behavioral deviation. UEBA's 90-day country baseline is particularly valuable for distinguishing legitimate travel from credential theft.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 3 and the quick UEBA check in Query 7C. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: Geographic Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Geographic Anomaly Assessment
+// Purpose: Expanded UEBA analysis for impossible travel —
+//          country/ISP first-time flags, peer group travel
+//          patterns, and account risk context
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Country analysis — core for impossible travel
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    CountryUncommonInTenant = tobool(ActivityInsights.CountryUncommonlyConnectedFromInTenant),
+    // ISP analysis
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    // Device/Browser analysis
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    FirstTimeBrowser = tobool(ActivityInsights.FirstTimeUserConnectedViaBrowser),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Travel Pattern and Mobility Summary
+
+```kql
+// ============================================================
+// Query 8B: User Geographic Mobility Summary via UEBA
+// Purpose: Aggregate geographic anomaly signals over 30 days
+//          to understand the user's travel frequency and
+//          determine if impossible travel is routine
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 30d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. AlertTime)
+| where UserPrincipalName =~ TargetUser
+| where ActivityType == "LogOn"
+| summarize
+    TotalLogons = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    AvgPriority = avg(InvestigationPriority),
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    UncommonCountryCount = countif(tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser)),
+    UncommonCountryAmongPeersCount = countif(tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers)),
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    UniqueCountries = dcount(SourceIPLocation),
+    Countries = make_set(SourceIPLocation),
+    UniqueIPs = dcount(SourceIPAddress),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius)),
+    IsDormant = take_any(tobool(UsersInsights.IsDormantAccount)),
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AvgPriority = round(AvgPriority, 1),
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalLogons * 100, 1),
+    TravelFrequency = case(
+        UniqueCountries >= 5, "Frequent traveler — 5+ countries in 30d",
+        UniqueCountries >= 3, "Occasional traveler — 3-4 countries in 30d",
+        UniqueCountries == 2, "Rare traveler — 2 countries in 30d",
+        "Single location — 1 country in 30d"
+    )
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **Country-level analysis**: UEBA builds country baselines over 90 days. `FirstTimeCountry = true` means the user has NEVER connected from this country in the past 90 days — stronger signal than the sign-in log baseline in Step 3
+- **Peer group travel**: `CountryUncommonAmongPeers = true` reveals whether travel to this country is normal for users in similar roles (e.g., sales team may travel frequently vs. finance team)
+- **TravelFrequency**: A "Frequent traveler" generating impossible travel alerts is much less suspicious than a "Single location" user
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| FirstTimeCountry | true — never connected from this country | false — known travel |
+| CountryUncommonAmongPeers | true — peers don't travel there | false — common destination |
+| CountryUncommonInTenant | true — no one in org goes there | false — known location |
+| FirstTimeISP | true — new ISP in new country | false — known ISP |
+| TravelFrequency | Single location user suddenly in 2+ countries | Frequent traveler |
+| IsDormantAccount | true — dormant account traveling | false — active user |
+| BlastRadius | High — privileged account | Low — standard user |
+| ThreatIndicator | VPN, Proxy, Hosting | Empty |
+
+**Decision guidance:**
+
+- **FirstTimeCountry + CountryUncommonAmongPeers + CountryUncommonInTenant = all true** → Country never seen for user, peers, or org. Very high confidence of credential abuse from foreign infrastructure
+- **TravelFrequency = "Single location" + FirstTimeCountry = true** → A user who has never traveled suddenly connects from two countries simultaneously. Near-certain credential theft
+- **TravelFrequency = "Frequent traveler" + CountryUncommonAmongPeers = false** → User regularly travels and peers also visit this country. Likely legitimate. Consider closing as false positive
+- **IsDormantAccount = true** → Dormant account showing impossible travel is critical — inactive accounts don't travel. Proceed to Containment
+- **BlastRadius = High** → Privileged account with impossible travel requires immediate escalation regardless of travel frequency
+
+---
+
 ## 6. Containment Playbook
 
 Execute in this order. IMPORTANT: Collect evidence (Section 7 checklist) BEFORE taking containment actions that could alert the attacker or destroy evidence.

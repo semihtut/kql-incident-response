@@ -69,6 +69,11 @@ log_sources:
     license: "Entra ID P1/P2"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -983,6 +988,131 @@ AllRegistrations
 - For each affected user, perform full investigation (Steps 1-6)
 - If multiple users affected, escalate to SOC leadership
 - Begin containment for ALL affected users simultaneously
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the MFA method registration is anomalous. UEBA's `FirstTimeUserPerformedAction` and peer group comparison reveal whether MFA registration is a normal activity for this user. Critical account context — `IsDormantAccount`, `IsNewAccount`, and `BlastRadius` — helps determine if the registration represents an account takeover attempt.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: MFA Registration Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for MFA Registration
+// Purpose: Check if the MFA method registration is anomalous
+//          and assess account status (dormant, new, blast radius)
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T11:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Action analysis — MFA registration as an action
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Source analysis — registration from unusual location?
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    // Account context — critical for MFA takeover assessment
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Registration Access Pattern
+
+```kql
+// ============================================================
+// Query 8B: Post-MFA-Registration Behavioral Analysis
+// Purpose: Detect anomalous access patterns after MFA method
+//          was registered — attacker may use new MFA to persist
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T11:00:00Z);
+let TargetUser = "user@contoso.com";
+let PostRegistrationWindow = 12h;
+BehaviorAnalytics
+| where TimeGenerated between (AlertTime .. (AlertTime + PostRegistrationWindow))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    FirstTimeResourceCount = countif(tobool(ActivityInsights.FirstTimeUserAccessedResource)),
+    FirstTimeAppCount = countif(tobool(ActivityInsights.FirstTimeUserUsedApp)),
+    UncommonActionAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    Countries = make_set(SourceIPLocation),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius)),
+    IsDormant = take_any(tobool(UsersInsights.IsDormantAccount)),
+    IsNew = take_any(tobool(UsersInsights.IsNewAccount))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    TakeoverSignals = FirstTimeActionCount + FirstTimeResourceCount + FirstTimeAppCount + UncommonActionAmongPeers,
+    AccountRisk = case(
+        IsDormant == true, "CRITICAL — Dormant account",
+        IsNew == true and BlastRadius == "High", "HIGH — New privileged account",
+        BlastRadius == "High", "HIGH — Privileged account",
+        IsNew == true, "MEDIUM — New account",
+        "STANDARD"
+    )
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **IsDormantAccount**: A dormant account (180+ days inactive) suddenly registering a new MFA method is a **critical indicator** of account takeover. The attacker gained credentials and is registering their own MFA to maintain persistence
+- **IsNewAccount**: Combined with unusual MFA registration patterns, may indicate a honeytoken or test account being abused
+- **FirstTimeAction**: If MFA registration is a first-time action for this user AND they've been active for months, this is suspicious — legitimate users register MFA during onboarding, not months later
+- **Post-registration analysis**: Focus on whether the user accesses new resources or performs unusual actions after registering the new MFA method
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| IsDormantAccount | true — dormant account registering MFA | false — active user |
+| IsNewAccount | true + suspicious timing | true during onboarding |
+| FirstTimeAction | true — MFA reg is new for this user | false — registered before |
+| ActionUncommonAmongPeers | true — peers don't register MFA | false — normal during rollout |
+| FirstTimeISP | true — registration from new ISP | false — user's normal ISP |
+| FirstTimeCountry | true — from unusual location | false — user's location |
+| Post-registration TakeoverSignals | >= 3 — attacker establishing persistence | 0 — no unusual activity |
+| BlastRadius | High — privileged account | Low — standard user |
+| AccountRisk | CRITICAL or HIGH | STANDARD |
+
+**Decision guidance:**
+
+- **IsDormantAccount = true + MFA registration** → **CRITICAL**: Dormant account registering MFA is near-certain account takeover. The attacker is establishing persistence. Proceed to Containment immediately — remove the new MFA method and disable the account
+- **FirstTimeAction = true + FirstTimeISP = true + FirstTimeCountry = true** → Registration from a completely new location on a user who has never performed this action. Very high confidence of compromise
+- **Post-registration TakeoverSignals >= 3** → Attacker registered MFA and is now actively exploring the environment. Multiple first-time actions confirm takeover
+- **InvestigationPriority < 4 + normal ISP/country** → Likely legitimate MFA re-registration (device change, app update). Combined with clean findings from Steps 1-7, consider closing
+- **BlastRadius = High** → Any suspicious MFA registration on a privileged account requires immediate investigation regardless of other indicators
 
 ---
 

@@ -66,6 +66,11 @@ log_sources:
     license: "M365 E3+"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -642,6 +647,67 @@ SSPRWithASN
 - **Multiple users with resets in the same time window** = Coordinated campaign
 - **Same ActorIP across different TargetUsers** = Single attacker resetting multiple accounts
 - **Shared hosting ASN across resets** = Same attack infrastructure being reused
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the self-service password reset is anomalous. UEBA provides critical account status context — `IsDormantAccount` and `IsNewAccount` — that reveals if the password reset is a legitimate user action or an attacker leveraging SSPR to take over an account. Geographic and ISP anomalies during the reset further indicate whether the reset originated from the real user.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4.
+
+#### Query 8A: Password Reset Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for SSPR
+// Purpose: Check if the password reset activity is anomalous
+//          and assess account dormancy/blast radius
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T07:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 |
+| IsDormantAccount | true — dormant account resetting password | false |
+| FirstTimeAction | true — user never reset password via SSPR | false — resets periodically |
+| FirstTimeISP | true — reset from new ISP | false — user's ISP |
+| FirstTimeCountry | true — from unusual location | false — user's location |
+| BlastRadius | High — privileged account | Low |
+
+**Decision guidance:**
+
+- **IsDormantAccount = true + FirstTimeISP** → Dormant account password reset from new infrastructure. Near-certain account takeover
+- **FirstTimeAction = true + FirstTimeCountry = true** → Password reset from unusual location by user who never used SSPR. High suspicion
+- **InvestigationPriority < 4 + user's normal location** → Likely forgotten password scenario
 
 ---
 

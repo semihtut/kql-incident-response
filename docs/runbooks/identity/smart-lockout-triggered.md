@@ -65,6 +65,11 @@ log_sources:
     license: "Defender for Identity"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -611,6 +616,67 @@ union PersistenceActions, NewAccess
 - **"Add member to role"** = privilege escalation attempt (see [RB-0013](privileged-role-assignment.md))
 - **"Set inbox rule"** = BEC-style email manipulation (see [RB-0008](../email/suspicious-inbox-forwarding-rule.md))
 - **Timeline pattern:** lockout → successful auth → persistence → data access = complete attack chain
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess the source of lockout-triggering authentication failures. UEBA's `FailedLogOn` activity type tracking and geographic anomaly detection reveal whether the lockout source is an external attacker or a legitimate user with a forgotten password.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4.
+
+#### Query 8A: Lockout Source Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for Smart Lockout
+// Purpose: Assess whether the lockout-triggering failed logins
+//          originate from anomalous locations/ISPs
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T02:30:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Volume anomaly
+    UncommonHighVolume = tobool(ActivityInsights.UncommonHighVolumeOfOperations),
+    // Source analysis
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 |
+| UncommonHighVolume | true — burst exceeds baseline | false |
+| FirstTimeCountry | true — brute force from new country | false — user's location |
+| ISPUncommonAmongPeers | true — attack from unusual ISP | false — known ISP |
+| ThreatIndicator | Botnet, Proxy, Brute force tool | Empty |
+
+**Decision guidance:**
+
+- **UncommonHighVolume = true + FirstTimeCountry = true + ThreatIndicator populated** → External brute force from malicious infrastructure. Block IP and monitor for successful login
+- **InvestigationPriority < 4 + user's normal ISP** → Likely legitimate lockout (forgotten password, application misconfiguration)
+- **IsDormantAccount = true** → Brute force against dormant account is higher risk — may be targeted attack
 
 ---
 

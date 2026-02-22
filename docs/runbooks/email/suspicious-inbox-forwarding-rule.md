@@ -80,6 +80,11 @@ log_sources:
     license: "Entra ID P2"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -790,6 +795,72 @@ OfficeActivity
 **Next action:**
 - If campaign detected → Escalate to full incident response; all affected users need simultaneous containment
 - If isolated → Continue with single-user containment per Section 6
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the inbox forwarding rule creation is anomalous. UEBA's `FirstTimeUserPerformedAction` and peer group comparison reveal whether creating forwarding rules is normal behavior for this user and their organizational peers. Since inbox forwarding rules are a common BEC persistence mechanism, a first-time rule creation on a previously compromised account is a critical indicator.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4.
+
+#### Query 8A: Forwarding Rule Activity Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for Inbox Rule Creation
+// Purpose: Check if creating a forwarding rule is anomalous
+//          for this user and their peer group
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T14:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Action analysis — rule creation as an action
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Source context
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    FirstTimeDevice = tobool(ActivityInsights.FirstTimeUserConnectedFromDevice),
+    // Account context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 | < 4 |
+| FirstTimeAction | true — never created forwarding rules | false — manages rules regularly |
+| ActionUncommonAmongPeers | true — peers don't create rules | false — common in peer group |
+| FirstTimeISP | true — rule created from new ISP | false — user's ISP |
+| FirstTimeCountry | true — from unusual location | false — user's location |
+| IsDormantAccount | true — dormant account creating rules | false — active user |
+
+**Decision guidance:**
+
+- **FirstTimeAction = true + FirstTimeISP = true + FirstTimeCountry = true** → Forwarding rule created from a completely new location by a user who has never created rules. Near-certain BEC. Proceed to Containment
+- **ActionUncommonAmongPeers = true** → Creating forwarding rules is unusual in this user's role. Higher suspicion
+- **IsDormantAccount = true** → Dormant account creating forwarding rules is a critical BEC indicator — account is compromised and being used for data exfiltration
+- **ActionUncommonAmongPeers = false + user's normal ISP** → Creating forwarding rules is normal for this user's role. Likely legitimate
 
 ---
 

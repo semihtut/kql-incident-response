@@ -89,6 +89,11 @@ log_sources:
     license: "M365 E3+"
     required: true
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -900,6 +905,122 @@ CampaignScope
 - Block all identified spray IPs in Conditional Access named locations
 - For each compromised account → Run Step 6 blast radius assessment
 - If campaign is large-scale (100+ accounts) → Engage incident response team
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the failed authentication pattern and any successful post-spray sign-ins represent anomalous behavior. UEBA's `FailedLogOn` activity type directly tracks failed authentication anomalies, while peer group comparison reveals if the spray source locations are unusual for users in similar roles.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: Failed Logon Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Failed Logon Anomaly Assessment
+// Purpose: Check if UEBA flagged failed authentication patterns
+//          as anomalous for affected users
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T08:15:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Source analysis — spray origin
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommonForUser = tobool(ActivityInsights.ISPUncommonlyUsedByUser),
+    ISPUncommonAmongPeers = tobool(ActivityInsights.ISPUncommonlyUsedAmongPeers),
+    // Country analysis
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommonForUser = tobool(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    CountryUncommonAmongPeers = tobool(ActivityInsights.CountryUncommonlyConnectedFromAmongPeers),
+    // Volume anomaly
+    UncommonHighVolume = tobool(ActivityInsights.UncommonHighVolumeOfOperations),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Spray Successful Logon Anomalies
+
+```kql
+// ============================================================
+// Query 8B: Post-Spray Successful Authentication Anomalies
+// Purpose: If password spray succeeded (Step 3), check if
+//          subsequent logon activity deviates from user baseline
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T08:15:00Z);
+let TargetUser = "user@contoso.com";
+let PostSprayWindow = 24h;
+BehaviorAnalytics
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSprayWindow))
+| where UserPrincipalName =~ TargetUser
+| where ActivityType == "LogOn"
+| summarize
+    TotalLogons = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    FirstTimeCountryCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromCountry)),
+    FirstTimeISPCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedViaISP)),
+    FirstTimeDeviceCount = countif(tobool(ActivityInsights.FirstTimeUserConnectedFromDevice)),
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    UncommonAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    Countries = make_set(SourceIPLocation),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius)),
+    ThreatIntelHits = countif(isnotempty(tostring(DevicesInsights.ThreatIntelIndicatorType)))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalLogons * 100, 1),
+    AttackerSignals = FirstTimeCountryCount + FirstTimeISPCount + FirstTimeDeviceCount + FirstTimeActionCount
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **FailedLogOn vs LogOn**: Query 8A captures all activity types including failed logons; Query 8B focuses on successful logons post-spray to detect attacker access
+- **ISP/Country analysis**: Password sprays typically originate from hosting providers or VPNs. If `ISPUncommonAmongPeers = true` for the spray source, the ISP is not used by anyone in the user's peer group
+- **Post-spray window**: Default 24h. Narrow to 4h for targeted analysis, expand to 48h for slow-and-low attacks
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| UncommonHighVolume | true — burst of failed auths | false — normal volume |
+| ISPUncommonAmongPeers | true — spray from unusual ISP | false — known ISP |
+| CountryUncommonAmongPeers | true — spray from unusual country | false — expected country |
+| Post-spray FirstTimeISP | true — attacker using new ISP | false — known ISP |
+| Post-spray FirstTimeCountry | true — access from new country | false — user's country |
+| AttackerSignals (24h) | >= 3 — attacker exploration | 0 — clean post-spray |
+| BlastRadius | High — privileged account targeted | Low — standard user |
+| ThreatIndicator | Botnet, Proxy, VPN hosting | Empty |
+
+**Decision guidance:**
+
+- **UncommonHighVolume = true + ISPUncommonAmongPeers = true** → UEBA confirms the spray pattern as anomalous from an unusual source. Very high confidence of targeted attack
+- **Post-spray AttackerSignals >= 3** → Spray succeeded and attacker is accessing the environment. Multiple first-time flags indicate active compromise. Proceed to Containment
+- **InvestigationPriority < 4 + familiar ISP** → May be a legitimate application misconfiguration or password sync issue. Verify with user
+- **IsDormantAccount = true targeted by spray** → Attacker may be testing dormant accounts. High risk regardless of spray success
 
 ---
 

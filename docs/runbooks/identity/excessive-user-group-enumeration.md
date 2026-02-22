@@ -66,6 +66,11 @@ log_sources:
     license: "Entra ID P1/P2"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -105,6 +110,7 @@ data_checks:
    - [Step 5: Service Principal Enumeration Detection](#step-5-service-principal-enumeration-detection)
    - [Step 6: Post-Enumeration Lateral Movement and Privilege Escalation](#step-6-post-enumeration-lateral-movement-and-privilege-escalation)
    - [Step 7: Organization-Wide Enumeration Activity Sweep](#step-7-organization-wide-enumeration-activity-sweep)
+   - [Step 8: UEBA Enrichment — Behavioral Context Analysis](#step-8-ueba-enrichment--behavioral-context-analysis)
 6. [Containment Playbook](#6-containment-playbook)
 7. [Evidence Collection Checklist](#7-evidence-collection-checklist)
 8. [Escalation Criteria](#8-escalation-criteria)
@@ -755,6 +761,95 @@ MicrosoftGraphActivityLogs
 
 ---
 
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Microsoft Sentinel's UEBA engine to assess whether the enumerating entity has a history of anomalous behavior. UEBA's `ActivityInsights` fields reveal if the account suddenly started querying directory objects it never accessed before, using unfamiliar tools from new locations — critical context for distinguishing a compromised account performing reconnaissance from a legitimate IT automation.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If UEBA is not configured in your environment, skip this step. The investigation remains valid without UEBA, but behavioral context significantly improves confidence in True/False Positive determination.
+
+#### Query 8A: Enumerating Entity — UEBA Behavioral Assessment
+
+```kql
+// Step 8A: UEBA Behavioral Assessment for Enumerating Entity
+// Table: BehaviorAnalytics | Checks behavioral anomalies during enumeration window
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let TargetUser = "user@company.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    UserPrincipalName,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Activity anomaly indicators
+    ActivityInsights = parse_json(ActivityInsights),
+    UsersInsights = parse_json(UsersInsights)
+| extend
+    // Directory / app access anomalies
+    FirstTimeAppUsed = tostring(ActivityInsights.FirstTimeUserUsedApp),
+    AppUncommonlyUsed = tostring(ActivityInsights.AppUncommonlyUsedByUser),
+    AppUncommonAmongPeers = tostring(ActivityInsights.AppUncommonlyUsedAmongPeers),
+    FirstTimeActionPerformed = tostring(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonlyPerformed = tostring(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tostring(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Location / device anomalies
+    FirstTimeCountry = tostring(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    CountryUncommon = tostring(ActivityInsights.CountryUncommonlyConnectedFromByUser),
+    FirstTimeDevice = tostring(ActivityInsights.FirstTimeUserUsedDevice),
+    DeviceUncommon = tostring(ActivityInsights.DeviceUncommonlyUsedByUser),
+    FirstTimeISP = tostring(ActivityInsights.FirstTimeUserConnectedViaISP),
+    ISPUncommon = tostring(ActivityInsights.ISPUncommonlyUsedByUser),
+    // Volume anomalies
+    UncommonHighVolume = tostring(ActivityInsights.UncommonHighVolumeOfActions),
+    // User profile
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tostring(UsersInsights.IsDormantAccount),
+    IsNewAccount = tostring(UsersInsights.IsNewAccount)
+| extend
+    AnomalySignals = array_length(
+        pack_array(
+            iff(FirstTimeAppUsed == "True", "FirstTimeApp", ""),
+            iff(AppUncommonlyUsed == "True", "UncommonApp", ""),
+            iff(FirstTimeActionPerformed == "True", "FirstTimeAction", ""),
+            iff(ActionUncommonlyPerformed == "True", "UncommonAction", ""),
+            iff(FirstTimeCountry == "True", "FirstTimeCountry", ""),
+            iff(CountryUncommon == "True", "UncommonCountry", ""),
+            iff(FirstTimeDevice == "True", "FirstTimeDevice", ""),
+            iff(FirstTimeISP == "True", "FirstTimeISP", ""),
+            iff(UncommonHighVolume == "True", "HighVolume", ""),
+            iff(IsDormantAccount == "True", "DormantAccount", "")
+        )
+    )
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+**Expected findings:**
+
+| Indicator | Malicious Signal | Benign Signal |
+|---|---|---|
+| InvestigationPriority >= 7 | Highly anomalous activity — UEBA engine flags significant deviation | Normal account behavior |
+| FirstTimeAppUsed = True | Account suddenly using Graph PowerShell / CLI for the first time | IT admin regularly uses graph tools |
+| UncommonHighVolume = True | Burst of activity unlike historical pattern — enumeration spike | HR sync app with consistent daily volume |
+| FirstTimeActionPerformed = True | Account never performed directory reads before — new capability | IT role routinely reads directory |
+| IsDormantAccount = True | Dormant account reactivated for enumeration — strong compromise signal | Seasonal user (contractor returning) |
+| FirstTimeCountry = True | Enumeration from a country never seen for this account | User traveling to new location |
+| BlastRadius = High | Compromised account has wide access — high impact potential | Expected for IT admin accounts |
+
+**Decision guidance:**
+
+- **InvestigationPriority >= 7** with **UncommonHighVolume = True** + **FirstTimeAppUsed = True** → Strong indicator of compromised account used for reconnaissance. Escalate immediately.
+- **IsDormantAccount = True** + any enumeration activity → Dormant account reactivation for directory enumeration is a classic post-compromise pattern. Treat as confirmed compromise until proven otherwise.
+- **FirstTimeActionPerformed = True** + **FirstTimeCountry = True** → New capability from a new location — multiple "firsts" dramatically increase confidence in True Positive.
+- **InvestigationPriority < 4** with no anomaly flags → Account's enumeration pattern is consistent with historical behavior. Likely a legitimate tool or automation. Validate with app owner.
+
+---
+
 ## 6. Containment Playbook
 
 ### Immediate Actions (0-30 minutes)
@@ -842,6 +937,7 @@ MicrosoftGraphActivityLogs
 | 5 | Service Principal Enumeration | Detect app-based directory enumeration | AADServicePrincipalSignInLogs + GraphLogs |
 | 6 | Post-Enumeration Actions | Find privilege escalation after recon | AuditLogs + SigninLogs |
 | 7 | Org-Wide Enumeration Sweep | Find all high-volume enumerators | MicrosoftGraphActivityLogs |
+| 8 | UEBA Behavioral Assessment | Behavioral anomaly context for enumerating entity | BehaviorAnalytics |
 
 ---
 

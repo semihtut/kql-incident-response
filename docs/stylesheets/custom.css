@@ -2056,15 +2056,15 @@ html {
   opacity: 0.6;
 }
 
-/* --- 27h. Standalone Category Items (Endpoint, Cloud Apps, Okta) --- */
+/* --- 27h. Non-Section Items (Gallery, Endpoint, Cloud Apps, Okta) --- */
 /*
- * These categories have no child runbooks yet, so Material renders them
- * as plain .md-nav__item instead of .md-nav__item--section.
- * Styled identically to section headers using adjacent sibling combinator
- * to exclude Gallery (which sits before any section).
+ * All level-1 items that are NOT sections (no child runbooks).
+ * Includes Gallery (first item, before any section) and standalone
+ * categories (Endpoint, Cloud Apps, Okta — after sections).
+ * All get identical treatment to section headers.
  */
 
-[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link {
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -2073,7 +2073,7 @@ html {
   transition: color 0.2s ease;
 }
 
-[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link {
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -2081,17 +2081,26 @@ html {
   color: var(--md-default-fg-color--light);
 }
 
-/* Standalone header hover */
-[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
+/* Hover */
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
   color: var(--kql-accent);
 }
 
-[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
   color: var(--md-primary-fg-color);
 }
 
-/* Accent bar for standalone categories (same as section headers) */
-[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
+/* Active state — accent color when on that page */
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--active:not(.md-nav__item--section) > .md-nav__link {
+  color: var(--kql-accent);
+}
+
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--active:not(.md-nav__item--section) > .md-nav__link {
+  color: var(--md-primary-fg-color);
+}
+
+/* Accent bar for all non-section items */
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
   content: "";
   display: inline-block;
   width: 3px;
@@ -2104,7 +2113,7 @@ html {
   transition: opacity 0.2s ease;
 }
 
-[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
   content: "";
   display: inline-block;
   width: 3px;
@@ -2117,8 +2126,31 @@ html {
   transition: opacity 0.2s ease;
 }
 
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover .md-ellipsis::before {
+.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover .md-ellipsis::before {
   opacity: 1;
+}
+
+/* --- 27j. Sidebar Title (tab-level header, e.g. "Runbooks") --- */
+/*
+ * The label.md-nav__title inside the level-1 nav shows the tab name
+ * in the mobile drawer and as a back-link on desktop.
+ * Match it to the muted, professional style of category headers.
+ */
+
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--kql-text-muted);
+}
+
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
 }
 
 /* --- 27i. Responsive --- */

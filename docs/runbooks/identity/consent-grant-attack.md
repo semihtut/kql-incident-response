@@ -77,6 +77,11 @@ log_sources:
     license: "Office 365 E1+"
     required: false
     alternatives: []
+  - table: "BehaviorAnalytics"
+    product: "Microsoft Sentinel"
+    license: "Sentinel UEBA"
+    required: false
+    alternatives: []
 author: "Leo (Coordinator), Arina (IR), Hasan (Platform), Samet (KQL), Yunus (TI), Alp (QA)"
 created: 2026-02-22
 updated: 2026-02-22
@@ -1006,6 +1011,133 @@ AllConsents
 - For each CRITICAL or HIGH risk app, perform a full investigation (Steps 1-6)
 - Block identified malicious apps at the tenant level
 - Review and update the organization's consent policy (restrict user consent, require admin consent)
+
+---
+
+### Step 8: UEBA Enrichment — Behavioral Context Analysis
+
+**Purpose:** Leverage Sentinel UEBA to assess whether the OAuth consent grant is anomalous. UEBA's application-level insights are uniquely valuable here — `FirstTimeUserUsedApp` and `AppUncommonlyUsedAmongPeers` directly indicate whether this application has been seen before by the user or their role peers. Legitimate app consent typically involves apps that peers already use.
+
+!!! info "Requires Sentinel UEBA"
+    This step requires [Microsoft Sentinel UEBA](https://learn.microsoft.com/en-us/azure/sentinel/identify-threats-with-entity-behavior-analytics) to be enabled. If the `BehaviorAnalytics` table is empty or does not exist in your workspace, skip this step and rely on the manual baseline comparison in Step 4. UEBA needs approximately **one week** after activation before generating meaningful insights.
+
+#### Query 8A: Consent Activity Anomaly Assessment
+
+```kql
+// ============================================================
+// Query 8A: UEBA Anomaly Assessment for Consent Grant
+// Purpose: Check if UEBA flagged the app consent activity
+//          as anomalous — first-time app usage and peer
+//          group comparison for the consented application
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <5 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T09:00:00Z);
+let TargetUser = "user@contoso.com";
+let LookbackWindow = 7d;
+BehaviorAnalytics
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+| where UserPrincipalName =~ TargetUser
+| project
+    TimeGenerated,
+    ActivityType,
+    ActionType,
+    InvestigationPriority,
+    SourceIPAddress,
+    SourceIPLocation,
+    // Application analysis — critical for consent grant
+    FirstTimeApp = tobool(ActivityInsights.FirstTimeUserUsedApp),
+    AppUncommonForUser = tobool(ActivityInsights.AppUncommonlyUsedByUser),
+    AppUncommonAmongPeers = tobool(ActivityInsights.AppUncommonlyUsedAmongPeers),
+    AppUncommonInTenant = tobool(ActivityInsights.AppUncommonlyUsedInTenant),
+    // Action analysis — consent grant as an action
+    FirstTimeAction = tobool(ActivityInsights.FirstTimeUserPerformedAction),
+    ActionUncommonForUser = tobool(ActivityInsights.ActionUncommonlyPerformedByUser),
+    ActionUncommonAmongPeers = tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers),
+    // Source context — phishing link click location
+    FirstTimeISP = tobool(ActivityInsights.FirstTimeUserConnectedViaISP),
+    FirstTimeCountry = tobool(ActivityInsights.FirstTimeUserConnectedFromCountry),
+    // User context
+    BlastRadius = tostring(UsersInsights.BlastRadius),
+    IsDormantAccount = tobool(UsersInsights.IsDormantAccount),
+    IsNewAccount = tobool(UsersInsights.IsNewAccount),
+    // Threat intel
+    ThreatIndicator = tostring(DevicesInsights.ThreatIntelIndicatorType)
+| order by InvestigationPriority desc, TimeGenerated desc
+```
+
+#### Query 8B: Post-Consent Data Access Anomalies
+
+```kql
+// ============================================================
+// Query 8B: Post-Consent App Activity Behavioral Analysis
+// Purpose: Assess whether the consented app's data access
+//          patterns deviate from what's normal for this user
+// Table: BehaviorAnalytics
+// License: Sentinel UEBA required
+// Expected runtime: <10 seconds
+// ============================================================
+let AlertTime = datetime(2026-02-22T09:00:00Z);
+let TargetUser = "user@contoso.com";
+let PostConsentWindow = 24h;
+BehaviorAnalytics
+| where TimeGenerated between (AlertTime .. (AlertTime + PostConsentWindow))
+| where UserPrincipalName =~ TargetUser
+| summarize
+    TotalActivities = count(),
+    HighAnomalyCount = countif(InvestigationPriority >= 7),
+    MediumAnomalyCount = countif(InvestigationPriority >= 4 and InvestigationPriority < 7),
+    MaxPriority = max(InvestigationPriority),
+    // App usage anomalies
+    FirstTimeAppCount = countif(tobool(ActivityInsights.FirstTimeUserUsedApp)),
+    UncommonAppAmongPeers = countif(tobool(ActivityInsights.AppUncommonlyUsedAmongPeers)),
+    UncommonAppInTenant = countif(tobool(ActivityInsights.AppUncommonlyUsedInTenant)),
+    // Resource access anomalies (data exfiltration via app)
+    FirstTimeResourceCount = countif(tobool(ActivityInsights.FirstTimeUserAccessedResource)),
+    ResourceUncommonForUser = countif(tobool(ActivityInsights.ResourceUncommonlyAccessedByUser)),
+    // Action anomalies
+    FirstTimeActionCount = countif(tobool(ActivityInsights.FirstTimeUserPerformedAction)),
+    UncommonActionAmongPeers = countif(tobool(ActivityInsights.ActionUncommonlyPerformedAmongPeers)),
+    UniqueIPs = dcount(SourceIPAddress),
+    Countries = make_set(SourceIPLocation),
+    ActivityTypes = make_set(ActivityType),
+    BlastRadius = take_any(tostring(UsersInsights.BlastRadius))
+| extend
+    AnomalyRatio = round(todouble(HighAnomalyCount + MediumAnomalyCount) / TotalActivities * 100, 1),
+    ConsentRiskSignals = FirstTimeAppCount + UncommonAppAmongPeers + UncommonAppInTenant
+        + FirstTimeResourceCount + FirstTimeActionCount
+```
+
+**Tuning Guidance:**
+
+- **InvestigationPriority threshold**: `>= 7` = high-confidence anomaly, `>= 4` = moderate, `< 4` = likely normal
+- **App-level analysis**: `FirstTimeUserUsedApp = true` is expected for a new app consent. The critical indicator is `AppUncommonlyUsedAmongPeers = true` — if NO ONE in the user's peer group uses this app, it's very likely a malicious OAuth app from a phishing link
+- **AppUncommonlyUsedInTenant**: If the app has NEVER been seen across the entire tenant, highest risk — could be a specially crafted phishing app
+- **Post-consent resource access**: Malicious OAuth apps immediately access mail, files, and contacts. Multiple `FirstTimeResource` flags indicate data harvesting
+
+**Expected findings:**
+
+| Finding | Malicious Indicator | Benign Indicator |
+|---|---|---|
+| InvestigationPriority | >= 7 (high anomaly) | < 4 (normal behavior) |
+| FirstTimeApp | true — new app for user | false — previously used |
+| AppUncommonAmongPeers | true — peers don't use this app | false — common in peer group |
+| AppUncommonInTenant | true — never seen in org | false — known app |
+| FirstTimeAction | true — consent grant is new action | false — user consents regularly |
+| Post-consent FirstTimeResource | Multiple new resources accessed | Normal resource access |
+| ActionUncommonAmongPeers | true — peers don't grant consent | false — normal for role |
+| BlastRadius | High — privileged/admin account | Low — standard user |
+| IsDormantAccount | true — dormant account granting consent | false — active user |
+
+**Decision guidance:**
+
+- **AppUncommonInTenant = true + FirstTimeApp = true** → Highest risk. An app never seen in the entire organization that a user just consented to is almost certainly a phishing-delivered malicious OAuth app. Revoke consent immediately
+- **AppUncommonAmongPeers = true + post-consent resource access** → The app is unusual for the user's role AND is actively accessing data. Strong evidence of data exfiltration via malicious OAuth
+- **FirstTimeApp = true + AppUncommonAmongPeers = false** → The app is new for THIS user but peers already use it. Lower risk — likely a legitimate app the user is adopting
+- **ConsentRiskSignals >= 3** → Multiple anomalous signals post-consent indicate active abuse. Proceed to Containment
+- **InvestigationPriority < 4 + app is common in tenant** → Likely legitimate consent. Combined with clean findings from Steps 1-7, consider closing
+- **IsDormantAccount = true** → Dormant account granting OAuth consent is a critical indicator of account takeover
 
 ---
 
