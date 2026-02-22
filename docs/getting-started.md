@@ -28,6 +28,22 @@ Runbooks reference tables from multiple Microsoft products. Each runbook lists i
 !!! note
     You don't need every license to use the runbooks. Each runbook's metadata section lists required vs. optional log sources, so you can run partial investigations with whatever data you have available.
 
+### Platform Compatibility
+
+These runbooks are written for **Microsoft Sentinel** (Log Analytics workspace). If you're running queries in a different platform, be aware of these differences:
+
+| Aspect | Microsoft Sentinel | Defender XDR (Advanced Hunting) |
+|--------|-------------------|-------------------------------|
+| Time column | `TimeGenerated` | `Timestamp` |
+| Sign-in logs | `SigninLogs` | `AADSignInEventsBeta` |
+| Audit logs | `AuditLogs` | `CloudAppEvents` |
+| Office activity | `OfficeActivity` | `EmailEvents`, `CloudAppEvents` |
+| Risk events | `AADUserRiskEvents` | Not available |
+| Query language | KQL (full) | KQL (subset) |
+
+!!! warning "Table Names May Vary"
+    Table names and schemas can change as Microsoft updates its products. If a query returns no results, verify that the table exists in your environment by running `TableName | take 1`. Check the [Log Sources Reference](log-sources.md) for current table details.
+
 ## How to Use a Runbook
 
 ### 1. Identify the Alert
@@ -54,11 +70,23 @@ Runbooks are organized as numbered investigation steps. Each step includes:
 
 ### 4. Run KQL Queries
 
-Open **Microsoft Sentinel > Logs** in the Azure portal and paste the KQL queries. Replace placeholder values (marked with comments in the queries) with your specific alert details:
+Open **Microsoft Sentinel > Logs** in the Azure portal and paste the KQL queries. Each query is **self-contained** — you can copy-paste and run any step independently.
 
-- `<UserPrincipalName>` - The affected user's UPN
-- `<IPAddress>` - The suspicious IP address
-- `<TimeWindow>` - The investigation time range
+**Replace the investigation parameters** at the top of each query with your alert details:
+
+```kql
+let AlertTime = datetime(2026-02-22T08:15:00Z);  // UTC time from your alert
+let TargetUser = "user@contoso.com";              // Affected user's UPN
+```
+
+**How to find the correct AlertTime:**
+
+1. Open your incident in **Sentinel > Incidents**
+2. Copy the **First activity** time from the incident details pane
+3. Paste it in ISO 8601 / UTC format: `YYYY-MM-DDTHH:MM:SSZ`
+
+!!! tip "TimeGenerated vs Event Time"
+    Queries filter on `TimeGenerated` (when Sentinel ingested the log), which may differ slightly from the actual event time. All queries use generous time windows (typically ±2h to ±4h around AlertTime) to account for ingestion delays. If you suspect significant lag, widen the `LookbackWindow` parameter.
 
 ### 5. Follow the Decision Tree
 

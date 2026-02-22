@@ -214,9 +214,9 @@ All queries in this runbook use the following shared input parameters. Replace t
 // ============================================================
 // SHARED INPUT PARAMETERS - Set these before running any query
 // ============================================================
-let targetUser = "user@contoso.com";          // UserPrincipalName from the alert
-let alertTime = datetime(2026-02-22T14:30:00Z); // TimeGenerated of the risk event
-let anonIP = "185.220.101.42";               // The anonymous IP address from the risk event
+let TargetUser = "user@contoso.com";          // UserPrincipalName from the alert
+let AlertTime = datetime(2026-02-22T14:30:00Z); // TimeGenerated of the risk event
+let AnonIP = "185.220.101.42";               // The anonymous IP address from the risk event
 ```
 
 ---
@@ -270,14 +270,14 @@ The goal of quick triage is to determine within 2-3 steps whether this alert is 
 // Tables: AADUserRiskEvents, SigninLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let anonIP = "185.220.101.42";
-let lookbackWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let AnonIP = "185.220.101.42";
+let LookbackWindow = 4h;
 // --- Part 1: Get the risk event ---
-let riskEvent = AADUserRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let RiskEvent = AADUserRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "anonymizedIPAddress"
     | project
         RiskTimeGenerated = TimeGenerated,
@@ -293,10 +293,10 @@ let riskEvent = AADUserRiskEvents
         Id
     | top 1 by RiskTimeGenerated desc;
 // --- Part 2: Get the corresponding sign-in ---
-let signIn = SigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
-    | where IPAddress == anonIP
+let SignIn = SigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
+    | where IPAddress == AnonIP
     | where ResultType == "0"
     | project
         SigninTime = TimeGenerated,
@@ -323,19 +323,19 @@ let signIn = SigninLogs
         SessionId
     | top 1 by SigninTime desc;
 // --- Part 3: Check for compound risk ---
-let otherRiskEvents = AADUserRiskEvents
-    | where TimeGenerated between ((alertTime - 7d) .. (alertTime + 1d))
-    | where UserPrincipalName == targetUser
+let OtherRiskEvents = AADUserRiskEvents
+    | where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + 1d))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType != "anonymizedIPAddress"
     | summarize
         OtherRiskEventCount = count(),
         OtherRiskTypes = make_set(RiskEventType),
         OtherRiskLevels = make_set(RiskLevel);
 // --- Part 4: Combined output ---
-riskEvent
+RiskEvent
 | extend placeholder = 1
-| join kind=leftouter (signIn | extend placeholder = 1) on placeholder
-| join kind=leftouter (otherRiskEvents | extend placeholder = 1) on placeholder
+| join kind=leftouter (SignIn | extend placeholder = 1) on placeholder
+| join kind=leftouter (OtherRiskEvents | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1, placeholder2
 | extend
     CompoundRiskAssessment = case(
@@ -390,11 +390,11 @@ riskEvent
 - Query scans a 4h window around the alert time - very fast
 - The compound risk check scans 7 days of risk events for the user
 - Expected result: 1 row with risk event, sign-in details, and compound risk assessment
-- If sign-in row is empty (no match for anonIP), try expanding lookbackWindow or check failed sign-ins
+- If sign-in row is empty (no match for AnonIP), try expanding LookbackWindow or check failed sign-ins
 
 **Tuning Guidance:**
-- **lookbackWindow**: Default 4h. Increase to 12h if the risk event and sign-in have significant time lag
-- **anonIP filter**: If the risk event IP doesn't match any successful sign-in, the sign-in may have failed. Remove `ResultType == "0"` to check for failed attempts
+- **LookbackWindow**: Default 4h. Increase to 12h if the risk event and sign-in have significant time lag
+- **AnonIP filter**: If the risk event IP doesn't match any successful sign-in, the sign-in may have failed. Remove `ResultType == "0"` to check for failed attempts
 
 **Expected findings:**
 
@@ -438,15 +438,15 @@ riskEvent
 // Tables: SigninLogs, ThreatIntelligenceIndicator
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let anonIP = "185.220.101.42";
-let lookbackWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let AnonIP = "185.220.101.42";
+let LookbackWindow = 4h;
 // --- Part 1: Get the sign-in details for UA analysis ---
-let signInDetails = SigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
-    | where IPAddress == anonIP
+let SignInDetails = SigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
+    | where IPAddress == AnonIP
     | where ResultType == "0"
     | top 1 by TimeGenerated desc
     | project
@@ -458,11 +458,11 @@ let signInDetails = SigninLogs
         AppDisplayName,
         AutonomousSystemNumber = tostring(AutonomousSystemNumber);
 // --- Part 2: TI lookup for the anonymous IP ---
-let tiMatch = ThreatIntelligenceIndicator
+let TiMatch = ThreatIntelligenceIndicator
     | where isnotempty(NetworkIP)
     | where Active == true
     | where ExpirationDateTime > now()
-    | where NetworkIP == anonIP
+    | where NetworkIP == AnonIP
     | project
         ThreatType,
         ConfidenceScore,
@@ -471,19 +471,19 @@ let tiMatch = ThreatIntelligenceIndicator
         SourceSystem
     | top 1 by ConfidenceScore desc;
 // --- Part 3: Check how many org users use this IP ---
-let orgUsage = SigninLogs
+let OrgUsage = SigninLogs
     | where TimeGenerated > ago(30d)
-    | where IPAddress == anonIP
+    | where IPAddress == AnonIP
     | where ResultType == "0"
     | summarize
         OrgUsersFromIP = dcount(UserPrincipalName),
         OrgUserList = make_set(UserPrincipalName, 10),
         TotalSigninsFromIP = count();
 // --- Part 4: Classification ---
-signInDetails
+SignInDetails
 | extend placeholder = 1
-| join kind=leftouter (tiMatch | extend placeholder = 1) on placeholder
-| join kind=leftouter (orgUsage | extend placeholder = 1) on placeholder
+| join kind=leftouter (TiMatch | extend placeholder = 1) on placeholder
+| join kind=leftouter (OrgUsage | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1, placeholder2
 | extend
     // Tor Browser detection via UserAgent
@@ -573,13 +573,13 @@ signInDetails
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let baselinePeriod = 30d;
-let anonIP = "185.220.101.42";
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let BaselinePeriod = 30d;
+let AnonIP = "185.220.101.42";
 SigninLogs
-| where TimeGenerated between ((alertTime - baselinePeriod) .. alertTime)
-| where UserPrincipalName == targetUser
+| where TimeGenerated between ((AlertTime - BaselinePeriod) .. AlertTime)
+| where UserPrincipalName == TargetUser
 | where ResultType == "0"
 | summarize
     // Volume metrics
@@ -606,7 +606,7 @@ SigninLogs
     WeekdaySignins = countif(dayofweek(TimeGenerated) between (1d .. 5d)),
     WeekendSignins = countif(dayofweek(TimeGenerated) in (0d, 6d)),
     // Anonymous IP history
-    AnonIPSignins = countif(IPAddress == anonIP),
+    AnonIPSignins = countif(IPAddress == AnonIP),
     EarliestSignin = min(TimeGenerated),
     LatestSignin = max(TimeGenerated)
 | extend
@@ -636,7 +636,7 @@ SigninLogs
 - Expected result: 1 row with full 30-day baseline profile
 
 **Tuning Guidance:**
-- **baselinePeriod**: Default 30d. For new employees with <30 days of sign-in history, this query may show limited data. Flag as "insufficient baseline"
+- **BaselinePeriod**: Default 30d. For new employees with <30 days of sign-in history, this query may show limited data. Flag as "insufficient baseline"
 - **Business hours**: Default 8-18. Adjust for the user's timezone and work schedule
 - **IP diversity threshold**: DistinctIPs > 20 suggests a mobile/VPN user. Adjust based on org patterns
 
@@ -674,15 +674,15 @@ SigninLogs
 // Table: SigninLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let anonIP = "185.220.101.42";
-let sessionWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let AnonIP = "185.220.101.42";
+let SessionWindow = 4h;
 // Get all sign-ins from the anonymous IP
 SigninLogs
-| where TimeGenerated between ((alertTime - sessionWindow) .. (alertTime + sessionWindow))
-| where UserPrincipalName == targetUser
-| where IPAddress == anonIP
+| where TimeGenerated between ((AlertTime - SessionWindow) .. (AlertTime + SessionWindow))
+| where UserPrincipalName == TargetUser
+| where IPAddress == AnonIP
 | project
     TimeGenerated,
     UserPrincipalName,
@@ -726,7 +726,7 @@ SigninLogs
 - Failed sign-ins (ResultType != "0") are important - they may indicate credential testing before a successful sign-in
 
 **Tuning Guidance:**
-- **sessionWindow**: Default 4h. Expand to 24h for thorough investigation
+- **SessionWindow**: Default 4h. Expand to 24h for thorough investigation
 - **Failed sign-ins**: Multiple failed attempts followed by success is a classic credential testing pattern
 - **Multiple apps**: Accessing many different apps in rapid succession suggests automated enumeration
 
@@ -764,14 +764,14 @@ SigninLogs
 // Table: AADNonInteractiveUserSignInLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let anonIP = "185.220.101.42";
-let tokenWindow = 8h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let AnonIP = "185.220.101.42";
+let TokenWindow = 8h;
 AADNonInteractiveUserSignInLogs
-| where TimeGenerated between ((alertTime - 1h) .. (alertTime + tokenWindow))
-| where UserPrincipalName == targetUser
-| where IPAddress == anonIP
+| where TimeGenerated between ((AlertTime - 1h) .. (AlertTime + TokenWindow))
+| where UserPrincipalName == TargetUser
+| where IPAddress == AnonIP
 | summarize
     TotalNonInteractiveEvents = count(),
     SuccessfulEvents = countif(ResultType == "0"),
@@ -806,7 +806,7 @@ AADNonInteractiveUserSignInLogs
 - Expected result: 1 summary row with token usage assessment
 
 **Tuning Guidance:**
-- **tokenWindow**: Default 8h. Expand to 24h for long-running sessions
+- **TokenWindow**: Default 8h. Expand to 24h for long-running sessions
 - **Volume thresholds**: >20 events suggests automated access. Adjust based on normal app usage patterns
 - **Sensitive apps**: Customize the list based on which apps are most critical in your environment
 
@@ -844,11 +844,11 @@ AADNonInteractiveUserSignInLogs
 // Table: AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let PostSignInWindow = 4h;
 AuditLogs
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 | where OperationName in (
     "User registered security info",
     "User deleted security info",
@@ -870,8 +870,8 @@ AuditLogs
     "Add eligible member to role"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -887,7 +887,7 @@ AuditLogs
     TargetUPN,
     TargetDisplayName,
     ModifiedProperties,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",
@@ -913,12 +913,12 @@ AuditLogs
 // Table: OfficeActivity
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let PostSignInWindow = 4h;
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | extend CleanClientIP = extract(@"(\d+\.\d+\.\d+\.\d+)", 1, ClientIP)
 | project
     TimeGenerated,
@@ -927,7 +927,7 @@ OfficeActivity
     UserId,
     CleanClientIP,
     RawClientIP = ClientIP,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     RiskCategory = case(
         Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule"),
             "CRITICAL - INBOX RULE",
@@ -959,12 +959,12 @@ OfficeActivity
 // Table: OfficeActivity
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let PostSignInWindow = 4h;
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | where Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule")
 | mv-expand Parameter = parse_json(Parameters)
 | summarize
@@ -1009,11 +1009,11 @@ OfficeActivity
 - All queries in this step scan narrow windows (4 hours) with specific user filters - very fast
 - OfficeActivity has up to 60 min ingestion latency. If the alert is <1 hour old, results may be incomplete
 - IP normalization is needed for OfficeActivity.ClientIP which may include port numbers and IPv6-mapped formats
-- Match CleanClientIP against anonIP to determine if post-sign-in activity came from the anonymous IP
+- Match CleanClientIP against AnonIP to determine if post-sign-in activity came from the anonymous IP
 
 **Tuning Guidance:**
-- **postSignInWindow**: Default 4h. For fast triage use 2h, for thorough investigation expand to 24h
-- **IP correlation**: If CleanClientIP matches anonIP, the post-sign-in activity is definitively from the anonymous session
+- **PostSignInWindow**: Default 4h. For fast triage use 2h, for thorough investigation expand to 24h
+- **IP correlation**: If CleanClientIP matches AnonIP, the post-sign-in activity is definitively from the anonymous session
 
 **Expected findings:**
 
@@ -1046,12 +1046,12 @@ OfficeActivity
 // Table: ThreatIntelligenceIndicator
 // Expected runtime: <3 seconds
 // ============================================================
-let anonIP = "185.220.101.42";
+let AnonIP = "185.220.101.42";
 ThreatIntelligenceIndicator
 | where isnotempty(NetworkIP)
 | where Active == true
 | where ExpirationDateTime > now()
-| where NetworkIP == anonIP
+| where NetworkIP == AnonIP
 | where ConfidenceScore >= 50
 | project
     NetworkIP,
@@ -1087,12 +1087,12 @@ ThreatIntelligenceIndicator
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let anonIP = "185.220.101.42";
-let targetUser = "user@contoso.com";
-let lookbackPeriod = 30d;
+let AnonIP = "185.220.101.42";
+let TargetUser = "user@contoso.com";
+let LookbackPeriod = 30d;
 SigninLogs
-| where TimeGenerated > ago(lookbackPeriod)
-| where IPAddress == anonIP
+| where TimeGenerated > ago(LookbackPeriod)
+| where IPAddress == AnonIP
 | summarize
     TotalSignins = count(),
     SuccessfulSignins = countif(ResultType == "0"),
@@ -1108,9 +1108,9 @@ SigninLogs
             "LIKELY CORPORATE VPN - Used by 10+ users (shared exit IP)",
         DistinctUsers > 3,
             "POSSIBLY SHARED VPN - Used by multiple users",
-        DistinctUsers == 1 and UserList has targetUser,
+        DistinctUsers == 1 and UserList has TargetUser,
             "SINGLE USER - Only used by the target user (higher risk)",
-        DistinctUsers == 1 and not(UserList has targetUser),
+        DistinctUsers == 1 and not(UserList has TargetUser),
             "SINGLE OTHER USER - Used by a different user only",
         DistinctUsers == 0,
             "NEVER SEEN - IP has never been used for sign-ins",
@@ -1123,7 +1123,7 @@ SigninLogs
             "CREDENTIAL TESTING - Multiple failed attempts for single user",
         "NO ATTACK PATTERN"
     ),
-    IsTargetUserIncluded = iff(UserList has targetUser, "Yes", "No")
+    IsTargetUserIncluded = iff(UserList has TargetUser, "Yes", "No")
 ```
 
 **Performance Notes:**
@@ -1379,7 +1379,7 @@ All queries include datatable-based inline tests with synthetic data. Each test 
 // TEST: Query 1 - Extract Anonymous IP Risk Event and Sign-In
 // Synthetic data: 6 risk events + 6 sign-in rows
 // ============================================================
-let testRiskEvents = datatable(
+let TestRiskEvents = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     RiskEventType: string,
@@ -1423,7 +1423,7 @@ let testRiskEvents = datatable(
         dynamic({"city":"London","countryOrRegion":"GB"}),
         dynamic(null), "corr-006", "risk-006"
 ];
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1491,23 +1491,23 @@ let testSigninLogs = datatable(
         "multiFactorAuthentication", dynamic({"authMethod":"PhoneAppOTP"}),
         "success", "0", "corr-009", "sess-009"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let anonIP = "185.220.101.42";
-let lookbackWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let AnonIP = "185.220.101.42";
+let LookbackWindow = 4h;
 // Part 1: Risk event
-let riskEvent = testRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let RiskEvent = TestRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "anonymizedIPAddress"
     | project RiskTimeGenerated = TimeGenerated, UserPrincipalName, RiskEventType,
         RiskLevel, RiskIpAddress = IpAddress, DetectionTimingType, Id
     | top 1 by RiskTimeGenerated desc;
 // Part 2: Sign-in
-let signIn = testSigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
-    | where IPAddress == anonIP
+let SignIn = TestSigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
+    | where IPAddress == AnonIP
     | where ResultType == "0"
     | project SigninTime = TimeGenerated, IPAddress,
         DeviceId = tostring(DeviceDetail.deviceId),
@@ -1517,15 +1517,15 @@ let signIn = testSigninLogs
         ConditionalAccessStatus
     | top 1 by SigninTime desc;
 // Part 3: Compound risk
-let otherRiskEvents = testRiskEvents
-    | where TimeGenerated between ((alertTime - 7d) .. (alertTime + 1d))
-    | where UserPrincipalName == targetUser
+let OtherRiskEvents = TestRiskEvents
+    | where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + 1d))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType != "anonymizedIPAddress"
     | summarize OtherRiskEventCount = count(), OtherRiskTypes = make_set(RiskEventType);
-riskEvent
+RiskEvent
 | extend placeholder = 1
-| join kind=leftouter (signIn | extend placeholder = 1) on placeholder
-| join kind=leftouter (otherRiskEvents | extend placeholder = 1) on placeholder
+| join kind=leftouter (SignIn | extend placeholder = 1) on placeholder
+| join kind=leftouter (OtherRiskEvents | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1, placeholder2
 | extend CompoundRiskAssessment = case(
     OtherRiskEventCount > 0 and OtherRiskTypes has "unfamiliarFeatures",
@@ -1550,7 +1550,7 @@ riskEvent
 // TEST: Query 2 - Anonymous IP Classification
 // Synthetic data: 4 sign-ins from different anonymous IP types
 // ============================================================
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1582,7 +1582,7 @@ let testSigninLogs = datatable(
         "python-requests/2.28.1",
         "Microsoft Graph", "Mobile Apps and Desktop clients", "9999", "0"
 ];
-let testTI = datatable(
+let TestTI = datatable(
     NetworkIP: string,
     Active: bool,
     ExpirationDateTime: datetime,
@@ -1598,21 +1598,21 @@ let testTI = datatable(
         "Known anonymizing proxy service", dynamic(["proxy","anonymizer"]), "OSINT"
 ];
 // Test classification for user@contoso.com (Tor)
-let anonIP = "185.220.101.42";
-let signInDetails = testSigninLogs
-    | where IPAddress == anonIP
+let AnonIP = "185.220.101.42";
+let SignInDetails = TestSigninLogs
+    | where IPAddress == AnonIP
     | where ResultType == "0"
     | top 1 by TimeGenerated desc
     | project IPAddress, UserAgent, DeviceBrowser = tostring(DeviceDetail.browser),
         AutonomousSystemNumber;
-let tiMatch = testTI
+let TiMatch = TestTI
     | where Active == true
-    | where NetworkIP == anonIP
+    | where NetworkIP == AnonIP
     | project ThreatType, ConfidenceScore, Description, Tags
     | top 1 by ConfidenceScore desc;
-signInDetails
+SignInDetails
 | extend placeholder = 1
-| join kind=leftouter (tiMatch | extend placeholder = 1) on placeholder
+| join kind=leftouter (TiMatch | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1
 | extend IPClassification = case(
     ThreatType has "tor" or Description has "Tor",
@@ -1637,7 +1637,7 @@ signInDetails
 // TEST: Query 3 - 30-Day Sign-In Baseline
 // Synthetic data: 10 baseline sign-ins from known locations
 // ============================================================
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1705,20 +1705,20 @@ let testSigninLogs = datatable(
         "Microsoft Teams", "multiFactorAuthentication",
         dynamic({"authMethod":"PhoneAppNotification"}), "Browser", "0"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let anonIP = "185.220.101.42";
-let baselinePeriod = 30d;
-testSigninLogs
-| where TimeGenerated between ((alertTime - baselinePeriod) .. alertTime)
-| where UserPrincipalName == targetUser
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let AnonIP = "185.220.101.42";
+let BaselinePeriod = 30d;
+TestSigninLogs
+| where TimeGenerated between ((AlertTime - BaselinePeriod) .. AlertTime)
+| where UserPrincipalName == TargetUser
 | where ResultType == "0"
 | summarize
     TotalSignins = count(),
     DistinctIPs = dcount(IPAddress),
     KnownIPs = make_set(IPAddress, 50),
     KnownCities = make_set(tostring(LocationDetails.city)),
-    AnonIPSignins = countif(IPAddress == anonIP),
+    AnonIPSignins = countif(IPAddress == AnonIP),
     MFACount = countif(AuthenticationRequirement == "multiFactorAuthentication"),
     SFACount = countif(AuthenticationRequirement == "singleFactorAuthentication"),
     BusinessHourSignins = countif(hourofday(TimeGenerated) between (8 .. 18)),
@@ -1748,7 +1748,7 @@ testSigninLogs
 // TEST: Query 6A - Directory Changes After Anonymous Sign-In
 // Synthetic data: 12 audit log rows
 // ============================================================
-let testAuditLogs = datatable(
+let TestAuditLogs = datatable(
     TimeGenerated: datetime,
     OperationName: string,
     Category: string,
@@ -1819,11 +1819,11 @@ let testAuditLogs = datatable(
         dynamic([{"displayName":"Normal App"}]),
         "corr-ben-007"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T14:30:00Z);
-let postSignInWindow = 4h;
-testAuditLogs
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let PostSignInWindow = 4h;
+TestAuditLogs
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 | where OperationName in (
     "User registered security info", "User deleted security info",
     "Consent to application", "Add delegated permission grant",
@@ -1832,13 +1832,13 @@ testAuditLogs
     "Add owner to application", "Add app role assignment grant to user"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | project
     TimeGenerated, OperationName,
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     TargetUPN = tostring(TargetResource.userPrincipalName),
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",
@@ -1864,7 +1864,7 @@ testAuditLogs
 // TEST: Query 7B - Organizational IP Usage Check
 // Synthetic data: 8 sign-ins from the anonymous IP
 // ============================================================
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1896,10 +1896,10 @@ let testSigninLogs = datatable(
     datetime(2026-02-20T08:00:00Z), "user@contoso.com", "185.220.101.42",
         "Microsoft Office 365", "0"
 ];
-let anonIP = "185.220.101.42";
-let targetUser = "user@contoso.com";
-testSigninLogs
-| where IPAddress == anonIP
+let AnonIP = "185.220.101.42";
+let TargetUser = "user@contoso.com";
+TestSigninLogs
+| where IPAddress == AnonIP
 | summarize
     TotalSignins = count(),
     SuccessfulSignins = countif(ResultType == "0"),
@@ -1910,7 +1910,7 @@ testSigninLogs
     IPClassification = case(
         DistinctUsers > 10, "LIKELY CORPORATE VPN",
         DistinctUsers > 3, "POSSIBLY SHARED VPN",
-        DistinctUsers == 1 and UserList has targetUser, "SINGLE USER",
+        DistinctUsers == 1 and UserList has TargetUser, "SINGLE USER",
         "UNKNOWN"
     ),
     AttackIndicator = case(

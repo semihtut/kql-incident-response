@@ -210,10 +210,10 @@ All queries in this runbook use the following shared input parameters. Replace t
 // ============================================================
 // SHARED INPUT PARAMETERS - Set these before running any query
 // ============================================================
-let targetUser = "user@contoso.com";          // UserPrincipalName from the alert
-let alertTime = datetime(2026-02-21T14:30:00Z); // TimeGenerated of the risk event
-let signInIP1 = "85.100.50.25";              // First sign-in IP (typically the "known" location)
-let signInIP2 = "198.51.100.42";             // Second sign-in IP (typically the "anomalous" location)
+let TargetUser = "user@contoso.com";          // UserPrincipalName from the alert
+let AlertTime = datetime(2026-02-21T14:30:00Z); // TimeGenerated of the risk event
+let SignInIP1 = "85.100.50.25";              // First sign-in IP (typically the "known" location)
+let SignInIP2 = "198.51.100.42";             // Second sign-in IP (typically the "anomalous" location)
 ```
 
 ---
@@ -268,14 +268,14 @@ The goal of quick triage is to determine within 2-3 steps whether this alert can
 // Tables: AADUserRiskEvents, SigninLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
 // Wider lookback to find both sign-ins in the impossible travel pair
-let lookbackWindow = 6h;
+let LookbackWindow = 6h;
 // --- Part 1: Get the risk event ---
-let riskEvent = AADUserRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let RiskEvent = AADUserRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "impossibleTravel"
     | project
         RiskTimeGenerated = TimeGenerated,
@@ -292,9 +292,9 @@ let riskEvent = AADUserRiskEvents
 // --- Part 2: Get recent successful sign-ins around the alert time ---
 // Impossible travel involves TWO sign-ins. We need to find both.
 // The risk event IpAddress is typically the SECOND (anomalous) sign-in.
-let recentSignins = SigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
+let RecentSignins = SigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | project
         SigninTime = TimeGenerated,
@@ -326,12 +326,12 @@ let recentSignins = SigninLogs
     | order by SigninTime desc;
 // --- Part 3: Identify the sign-in pair ---
 // Get the most recent 2 sign-ins from different IPs
-let signInPair = recentSignins
+let SignInPair = RecentSignins
     | summarize
         arg_max(SigninTime, *) by IPAddress
     | top 2 by SigninTime desc;
 // --- Part 4: Output both sign-ins side by side ---
-signInPair
+SignInPair
 | extend SignInOrder = row_number()
 | extend SignInLabel = iff(SignInOrder == 1, "SIGN-IN 2 (Later/Anomalous)", "SIGN-IN 1 (Earlier/Baseline)")
 | project
@@ -397,7 +397,7 @@ signInPair
 - If only 1 row returns, the earlier sign-in may have been outside the lookback window. Increase to 12h or 24h.
 
 **Tuning Guidance:**
-- **lookbackWindow**: Default 6h. Increase to 24h for offline detections where the risk event lags behind actual sign-ins
+- **LookbackWindow**: Default 6h. Increase to 24h for offline detections where the risk event lags behind actual sign-ins
 - **If only 1 IP found**: The "first" sign-in may have been a non-interactive sign-in. Check AADNonInteractiveUserSignInLogs for the matching pair
 
 **Expected findings:**
@@ -445,13 +445,13 @@ signInPair
 // Uses: geo_distance_2points() (Kusto built-in geospatial)
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let lookbackWindow = 6h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let LookbackWindow = 6h;
 // Get all successful sign-ins with geo coordinates
 let signins = SigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend
         Lat = toreal(tostring(LocationDetails.geoCoordinates.latitude)),
@@ -473,10 +473,10 @@ let lon1 = toreal(signin1.lon);
 let lat2 = toreal(signin2.lat);
 let lon2 = toreal(signin2.lon);
 // geo_distance_2points returns meters
-let distanceMeters = geo_distance_2points(lon1, lat1, lon2, lat2);
-let distanceKm = distanceMeters / 1000.0;
-let timeDiffHours = datetime_diff("second", time2, time1) / 3600.0;
-let speedKmH = iff(timeDiffHours > 0, distanceKm / timeDiffHours, real(999999));
+let DistanceMeters = geo_distance_2points(lon1, lat1, lon2, lat2);
+let DistanceKm = DistanceMeters / 1000.0;
+let TimeDiffHours = datetime_diff("second", time2, time1) / 3600.0;
+let SpeedKmH = iff(TimeDiffHours > 0, DistanceKm / TimeDiffHours, real(999999));
 print
     SignIn1_Time = time1,
     SignIn1_IP = tostring(signin1.ip),
@@ -488,21 +488,21 @@ print
     SignIn2_City = tostring(signin2.city),
     SignIn2_Country = tostring(signin2.country),
     SignIn2_DeviceId = tostring(signin2.deviceId),
-    DistanceKm = round(distanceKm, 1),
-    TimeDiffMinutes = round(timeDiffHours * 60, 1),
-    TimeDiffHours = round(timeDiffHours, 2),
-    RequiredSpeedKmH = round(speedKmH, 0),
+    DistanceKm = round(DistanceKm, 1),
+    TimeDiffMinutes = round(TimeDiffHours * 60, 1),
+    TimeDiffHours = round(TimeDiffHours, 2),
+    RequiredSpeedKmH = round(SpeedKmH, 0),
     SameDevice = tostring(signin1.deviceId) == tostring(signin2.deviceId) and isnotempty(tostring(signin1.deviceId)),
     TravelAssessment = case(
         tostring(signin1.deviceId) == tostring(signin2.deviceId) and isnotempty(tostring(signin1.deviceId)),
             "SAME DEVICE - Likely VPN/proxy (FP candidate)",
-        speedKmH > 900,
+        SpeedKmH > 900,
             "PHYSICALLY IMPOSSIBLE - Exceeds aircraft cruise speed",
-        speedKmH > 500,
+        SpeedKmH > 500,
             "HIGHLY UNLIKELY - Would require direct flight at max speed",
-        speedKmH > 200,
+        SpeedKmH > 200,
             "UNLIKELY - Short flight possible but tight with transit",
-        speedKmH > 100,
+        SpeedKmH > 100,
             "POSSIBLE - Domestic flight or high-speed rail feasible",
         "PLAUSIBLE - Ground transport is reasonable"
     )
@@ -562,17 +562,17 @@ print
 // MANDATORY - Do not skip this query
 // Expected runtime: 5-15 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let signInIP1 = "85.100.50.25";
-let signInIP2 = "198.51.100.42";
-let baselinePeriod = 30d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let SignInIP1 = "85.100.50.25";
+let SignInIP2 = "198.51.100.42";
+let BaselinePeriod = 30d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 // --- Part 1: Geographic footprint summary ---
-let geoFootprint = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let GeoFootprint = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend
         City = tostring(LocationDetails.city),
@@ -585,7 +585,7 @@ let geoFootprint = SigninLogs
         LastSeen = max(TimeGenerated)
         by IPAddress, City, Country, Lat, Lon;
 // --- Part 2: Count distinct locations ---
-let locationStats = geoFootprint
+let LocationStats = GeoFootprint
     | summarize
         TotalSignins = sum(SigninCount),
         DistinctIPs = dcount(IPAddress),
@@ -595,23 +595,23 @@ let locationStats = geoFootprint
         KnownCountries = make_set(Country),
         KnownIPs = make_set(IPAddress, 50);
 // --- Part 3: Check if alert IPs are known ---
-let ip1Known = toscalar(geoFootprint | where IPAddress == signInIP1 | count) > 0;
-let ip2Known = toscalar(geoFootprint | where IPAddress == signInIP2 | count) > 0;
-let ip1Country = toscalar(geoFootprint | where IPAddress == signInIP1 | take 1 | project Country);
-let ip2Country = toscalar(geoFootprint | where IPAddress == signInIP2 | take 1 | project Country);
+let ip1Known = toscalar(GeoFootprint | where IPAddress == SignInIP1 | count) > 0;
+let ip2Known = toscalar(GeoFootprint | where IPAddress == SignInIP2 | count) > 0;
+let ip1Country = toscalar(GeoFootprint | where IPAddress == SignInIP1 | take 1 | project Country);
+let ip2Country = toscalar(GeoFootprint | where IPAddress == SignInIP2 | take 1 | project Country);
 // --- Part 4: Calculate maximum travel radius ---
 // Find the two farthest-apart known locations to establish the user's "normal" travel range
-let maxRadius = geoFootprint
+let MaxRadius = GeoFootprint
     | extend placeholder = 1
-    | join kind=inner (geoFootprint | extend placeholder = 1) on placeholder
+    | join kind=inner (GeoFootprint | extend placeholder = 1) on placeholder
     | where IPAddress != IPAddress1
     | where isnotempty(Lat) and isnotempty(Lat1)
     | extend PairDistanceKm = geo_distance_2points(Lon, Lat, Lon1, Lat1) / 1000.0
     | summarize MaxKnownRadiusKm = max(PairDistanceKm);
 // --- Part 5: VPN switching frequency (IP changes within 1 hour) ---
-let vpnSwitchFrequency = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let VpnSwitchFrequency = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | order by TimeGenerated asc
     | extend PrevIP = prev(IPAddress), PrevTime = prev(TimeGenerated)
@@ -622,10 +622,10 @@ let vpnSwitchFrequency = SigninLogs
         RapidIPSwitches = count(),
         AvgSwitchIntervalMin = avg(TimeBetweenSwitchesMin);
 // --- Part 6: Combined output ---
-locationStats
+LocationStats
 | extend placeholder = 1
-| join kind=leftouter (maxRadius | extend placeholder = 1) on placeholder
-| join kind=leftouter (vpnSwitchFrequency | extend placeholder = 1) on placeholder
+| join kind=leftouter (MaxRadius | extend placeholder = 1) on placeholder
+| join kind=leftouter (VpnSwitchFrequency | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1, placeholder2
 | extend
     IP1_InBaseline = ip1Known,
@@ -656,14 +656,14 @@ locationStats
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let baselinePeriod = 30d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let BaselinePeriod = 30d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 SigninLogs
-| where TimeGenerated between (baselineStart .. baselineEnd)
-| where UserPrincipalName == targetUser
+| where TimeGenerated between (BaselineStart .. BaselineEnd)
+| where UserPrincipalName == TargetUser
 | where ResultType == "0"
 | extend
     City = tostring(LocationDetails.city),
@@ -682,10 +682,10 @@ SigninLogs
 - Query 3A scans 30 days of SigninLogs for a single user - moderate volume
 - The cross-join for max radius calculation can produce N^2 rows if the user has many distinct IPs. The `geo_distance_2points` is fast per-row
 - VPN switching frequency uses `prev()` which requires ordered data - the `order by` ensures correct results
-- If the user has >50 distinct IPs, consider reducing baselinePeriod to 14d
+- If the user has >50 distinct IPs, consider reducing BaselinePeriod to 14d
 
 **Tuning Guidance:**
-- **baselinePeriod**: Default 30d. Use 14d for high-mobility users (frequent travelers), 60d for sedentary users
+- **BaselinePeriod**: Default 30d. Use 14d for high-mobility users (frequent travelers), 60d for sedentary users
 - **Rapid IP switch threshold**: Default 60 minutes. Users with >5 rapid switches per day are almost certainly using VPN/proxy
 - **MaxKnownRadiusKm**: If the user's maximum known radius is >5000 km, they are a frequent international traveler - weight impossible travel alerts lower
 
@@ -722,17 +722,17 @@ SigninLogs
 // Table: SigninLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let signInIP1 = "85.100.50.25";
-let signInIP2 = "198.51.100.42";
-let lookbackWindow = 6h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let SignInIP1 = "85.100.50.25";
+let SignInIP2 = "198.51.100.42";
+let LookbackWindow = 6h;
 // Get device details for both IPs
-let deviceComparison = SigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
+let DeviceComparison = SigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
-    | where IPAddress in (signInIP1, signInIP2)
+    | where IPAddress in (SignInIP1, SignInIP2)
     | summarize arg_max(TimeGenerated, *) by IPAddress
     | extend
         DeviceId = tostring(DeviceDetail.deviceId),
@@ -758,9 +758,9 @@ let deviceComparison = SigninLogs
         ConditionalAccessStatus,
         SessionId;
 // Output with comparison flags
-deviceComparison
+DeviceComparison
 | extend placeholder = 1
-| join kind=inner (deviceComparison | extend placeholder = 1 | project-rename
+| join kind=inner (DeviceComparison | extend placeholder = 1 | project-rename
     OtherIP = IPAddress,
     OtherDeviceId = DeviceId,
     OtherDeviceOS = DeviceOS,
@@ -867,15 +867,15 @@ deviceComparison
 // License: Entra ID P1/P2 required
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let signInIP2 = "198.51.100.42";
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let SignInIP2 = "198.51.100.42";
 // Check 4 hours around the alert for token activity
-let tokenWindow = 4h;
+let TokenWindow = 4h;
 AADNonInteractiveUserSignInLogs
-| where TimeGenerated between ((alertTime - tokenWindow) .. (alertTime + tokenWindow))
-| where UserPrincipalName == targetUser
-| where IPAddress == signInIP2
+| where TimeGenerated between ((AlertTime - TokenWindow) .. (AlertTime + TokenWindow))
+| where UserPrincipalName == TargetUser
+| where IPAddress == SignInIP2
 | project
     TimeGenerated,
     UserPrincipalName,
@@ -901,7 +901,7 @@ AADNonInteractiveUserSignInLogs
         ResultType == "50076", "MFA REQUIRED - Token requires MFA reauthentication",
         strcat("OTHER - ResultType: ", ResultType)
     ),
-    MinutesFromAlert = datetime_diff("minute", TimeGenerated, alertTime)
+    MinutesFromAlert = datetime_diff("minute", TimeGenerated, AlertTime)
 | summarize
     TotalNonInteractiveEvents = count(),
     SuccessfulEvents = countif(ResultType == "0"),
@@ -930,22 +930,22 @@ AADNonInteractiveUserSignInLogs
 // Table: SigninLogs, AADNonInteractiveUserSignInLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let tokenWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let TokenWindow = 4h;
 // Combine interactive and non-interactive sign-ins
-let allSignins = union
+let AllSignins = union
     (SigninLogs
-        | where TimeGenerated between ((alertTime - tokenWindow) .. (alertTime + tokenWindow))
-        | where UserPrincipalName == targetUser
+        | where TimeGenerated between ((AlertTime - TokenWindow) .. (AlertTime + TokenWindow))
+        | where UserPrincipalName == TargetUser
         | where ResultType == "0"
         | project TimeGenerated, IPAddress, AppDisplayName, SessionId,
             SignInType = "Interactive",
             City = tostring(LocationDetails.city),
             Country = tostring(LocationDetails.countryOrRegion)),
     (AADNonInteractiveUserSignInLogs
-        | where TimeGenerated between ((alertTime - tokenWindow) .. (alertTime + tokenWindow))
-        | where UserPrincipalName == targetUser
+        | where TimeGenerated between ((AlertTime - TokenWindow) .. (AlertTime + TokenWindow))
+        | where UserPrincipalName == TargetUser
         | where ResultType == "0"
         | project TimeGenerated, IPAddress, AppDisplayName,
             SessionId = tostring(OriginalRequestId),
@@ -953,7 +953,7 @@ let allSignins = union
             City = tostring(LocationDetails.city),
             Country = tostring(LocationDetails.countryOrRegion));
 // Find sessions appearing from multiple IPs
-allSignins
+AllSignins
 | summarize
     DistinctIPs = dcount(IPAddress),
     IPList = make_set(IPAddress),
@@ -981,7 +981,7 @@ allSignins
 - Expected result for 5B: rows only if same SessionId appears from multiple IPs
 
 **Tuning Guidance:**
-- **tokenWindow**: Default 4h. Expand to 24h for thorough investigation of long-running token abuse
+- **TokenWindow**: Default 4h. Expand to 24h for thorough investigation of long-running token abuse
 - **AADNonInteractiveUserSignInLogs volume**: This table can have 100x the volume of SigninLogs. The IP filter is critical for performance
 - **OriginalRequestId vs SessionId**: In AADNonInteractiveUserSignInLogs, SessionId is often empty. Use OriginalRequestId as the session correlation key
 
@@ -1019,11 +1019,11 @@ allSignins
 // Table: AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
 AuditLogs
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 | where OperationName in (
     "User registered security info",
     "User deleted security info",
@@ -1045,8 +1045,8 @@ AuditLogs
     "Add eligible member to role"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -1062,7 +1062,7 @@ AuditLogs
     TargetUPN,
     TargetDisplayName,
     ModifiedProperties,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",
@@ -1088,12 +1088,12 @@ AuditLogs
 // Table: OfficeActivity
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | extend CleanClientIP = extract(@"(\d+\.\d+\.\d+\.\d+)", 1, ClientIP)
 | project
     TimeGenerated,
@@ -1102,7 +1102,7 @@ OfficeActivity
     UserId,
     CleanClientIP,
     RawClientIP = ClientIP,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     RiskCategory = case(
         Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule"),
             "CRITICAL - INBOX RULE",
@@ -1134,12 +1134,12 @@ OfficeActivity
 // Table: OfficeActivity
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | where Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule")
 | mv-expand Parameter = parse_json(Parameters)
 | summarize
@@ -1186,8 +1186,8 @@ OfficeActivity
 - IP normalization is needed for OfficeActivity.ClientIP which may include port numbers and IPv6-mapped formats
 
 **Tuning Guidance:**
-- **postSignInWindow**: Default 4h. For fast triage use 2h, for thorough investigation expand to 24h
-- **IP correlation**: Match CleanClientIP against signInIP2 (the anomalous IP) to determine if post-sign-in activity came from the attacker's infrastructure
+- **PostSignInWindow**: Default 4h. For fast triage use 2h, for thorough investigation expand to 24h
+- **IP correlation**: Match CleanClientIP against SignInIP2 (the anomalous IP) to determine if post-sign-in activity came from the attacker's infrastructure
 
 **Expected findings:**
 
@@ -1219,17 +1219,17 @@ OfficeActivity
 // Table: ThreatIntelligenceIndicator
 // Expected runtime: <3 seconds
 // ============================================================
-let signInIP1 = "85.100.50.25";
-let signInIP2 = "198.51.100.42";
+let SignInIP1 = "85.100.50.25";
+let SignInIP2 = "198.51.100.42";
 ThreatIntelligenceIndicator
 | where isnotempty(NetworkIP)
 | where Active == true
 | where ExpirationDateTime > now()
-| where NetworkIP in (signInIP1, signInIP2)
+| where NetworkIP in (SignInIP1, SignInIP2)
 | where ConfidenceScore >= 50
 | project
     NetworkIP,
-    MatchedAs = iff(NetworkIP == signInIP1, "IP1 (Baseline)", "IP2 (Anomalous)"),
+    MatchedAs = iff(NetworkIP == SignInIP1, "IP1 (Baseline)", "IP2 (Anomalous)"),
     ThreatType,
     ConfidenceScore,
     Description,
@@ -1256,13 +1256,13 @@ ThreatIntelligenceIndicator
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let signInIP1 = "85.100.50.25";
-let signInIP2 = "198.51.100.42";
-let targetUser = "user@contoso.com";
-let lookbackPeriod = 30d;
+let SignInIP1 = "85.100.50.25";
+let SignInIP2 = "198.51.100.42";
+let TargetUser = "user@contoso.com";
+let LookbackPeriod = 30d;
 SigninLogs
-| where TimeGenerated > ago(lookbackPeriod)
-| where IPAddress in (signInIP1, signInIP2)
+| where TimeGenerated > ago(LookbackPeriod)
+| where IPAddress in (SignInIP1, SignInIP2)
 | where ResultType == "0"
 | summarize
     TotalSignins = count(),
@@ -1273,21 +1273,21 @@ SigninLogs
     DistinctApps = make_set(AppDisplayName, 10)
     by IPAddress
 | extend
-    IPLabel = iff(IPAddress == signInIP1, "IP1 (Baseline)", "IP2 (Anomalous)"),
+    IPLabel = iff(IPAddress == SignInIP1, "IP1 (Baseline)", "IP2 (Anomalous)"),
     IPClassification = case(
         DistinctUsers > 10,
             "LIKELY CORPORATE - Used by 10+ users (shared exit IP)",
         DistinctUsers > 3,
             "POSSIBLY CORPORATE - Used by multiple users",
-        DistinctUsers == 1 and UserList has targetUser,
+        DistinctUsers == 1 and UserList has TargetUser,
             "SINGLE USER - Only used by the target user",
-        DistinctUsers == 1 and not(UserList has targetUser),
+        DistinctUsers == 1 and not(UserList has TargetUser),
             "SINGLE OTHER USER - Used by a different user only",
         DistinctUsers == 0,
             "NEVER SEEN - IP has never been used for successful sign-ins",
         "UNKNOWN"
     ),
-    IsTargetUserIncluded = iff(UserList has targetUser, "Yes", "No")
+    IsTargetUserIncluded = iff(UserList has TargetUser, "Yes", "No")
 | order by IPLabel asc
 ```
 
@@ -1301,12 +1301,12 @@ SigninLogs
 // License: Sentinel UEBA required
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let lookbackPeriod = 7d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let LookbackPeriod = 7d;
 BehaviorAnalytics
-| where TimeGenerated between ((alertTime - lookbackPeriod) .. (alertTime + 1d))
-| where UserPrincipalName == targetUser
+| where TimeGenerated between ((AlertTime - LookbackPeriod) .. (AlertTime + 1d))
+| where UserPrincipalName == TargetUser
 | where InvestigationPriority >= 5
 | project
     TimeGenerated,
@@ -1581,7 +1581,7 @@ All queries include datatable-based inline tests with synthetic data. Each test 
 // TEST: Query 1 - Extract Impossible Travel Sign-In Pair
 // Synthetic data: 4 malicious + 8 benign = 12 sign-in rows
 // ============================================================
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1707,12 +1707,12 @@ let testSigninLogs = datatable(
         "success", "0", "corr-b08", "sess-b08"
 ];
 // --- Test execution: Extract sign-in pair for user@contoso.com ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let lookbackWindow = 6h;
-let recentSignins = testSigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let LookbackWindow = 6h;
+let RecentSignins = TestSigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend
         Latitude = toreal(tostring(LocationDetails.geoCoordinates.latitude)),
@@ -1726,7 +1726,7 @@ let recentSignins = testSigninLogs
         UserAgent, AppDisplayName, SessionId
     | summarize arg_max(SigninTime, *) by IPAddress
     | top 2 by SigninTime desc;
-recentSignins
+RecentSignins
 | extend SignInOrder = row_number()
 | extend SignInLabel = iff(SignInOrder == 1, "SIGN-IN 2 (Later/Anomalous)", "SIGN-IN 1 (Earlier/Baseline)")
 | project SignInLabel, SigninTime, IPAddress, Latitude, Longitude, City, Country, DeviceId,
@@ -1754,21 +1754,21 @@ let lat2 = 55.7558;  // Moscow
 let lon2 = 37.6173;
 let time1 = datetime(2026-02-21T14:00:00Z);
 let time2 = datetime(2026-02-21T14:30:00Z);
-let distanceMeters = geo_distance_2points(lon1, lat1, lon2, lat2);
-let distanceKm = distanceMeters / 1000.0;
-let timeDiffHours = datetime_diff("second", time2, time1) / 3600.0;
-let speedKmH = distanceKm / timeDiffHours;
+let DistanceMeters = geo_distance_2points(lon1, lat1, lon2, lat2);
+let DistanceKm = DistanceMeters / 1000.0;
+let TimeDiffHours = datetime_diff("second", time2, time1) / 3600.0;
+let SpeedKmH = DistanceKm / TimeDiffHours;
 print
     Origin = "Istanbul, TR",
     Destination = "Moscow, RU",
-    DistanceKm = round(distanceKm, 1),
-    TimeDiffMinutes = round(timeDiffHours * 60, 1),
-    RequiredSpeedKmH = round(speedKmH, 0),
+    DistanceKm = round(DistanceKm, 1),
+    TimeDiffMinutes = round(TimeDiffHours * 60, 1),
+    RequiredSpeedKmH = round(SpeedKmH, 0),
     TravelAssessment = case(
-        speedKmH > 900, "PHYSICALLY IMPOSSIBLE",
-        speedKmH > 500, "HIGHLY UNLIKELY",
-        speedKmH > 200, "UNLIKELY",
-        speedKmH > 100, "POSSIBLE",
+        SpeedKmH > 900, "PHYSICALLY IMPOSSIBLE",
+        SpeedKmH > 500, "HIGHLY UNLIKELY",
+        SpeedKmH > 200, "UNLIKELY",
+        SpeedKmH > 100, "POSSIBLE",
         "PLAUSIBLE"
     )
 // Expected: DistanceKm ≈ 1755, TimeDiffMinutes = 30, RequiredSpeedKmH ≈ 3510
@@ -1782,7 +1782,7 @@ print
 // TEST: Query 3A - Travel Pattern Baseline
 // Synthetic data: 10 baseline sign-ins from known locations
 // ============================================================
-let baselineSignins = datatable(
+let BaselineSignins = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1816,12 +1816,12 @@ let baselineSignins = datatable(
     datetime(2026-02-01T03:00:00Z), "user@contoso.com", "198.51.100.42",
         dynamic({"city":"Moscow","countryOrRegion":"RU","geoCoordinates":{"latitude":55.7558,"longitude":37.6173}}), "50126"
 ];
-let signInIP1 = "85.100.50.25";
-let signInIP2 = "198.51.100.42";
-let targetUser = "user@contoso.com";
+let SignInIP1 = "85.100.50.25";
+let SignInIP2 = "198.51.100.42";
+let TargetUser = "user@contoso.com";
 // Build footprint from baseline
-let geoFootprint = baselineSignins
-    | where UserPrincipalName == targetUser
+let GeoFootprint = BaselineSignins
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend
         City = tostring(LocationDetails.city),
@@ -1831,9 +1831,9 @@ let geoFootprint = baselineSignins
         FirstSeen = min(TimeGenerated),
         LastSeen = max(TimeGenerated)
         by IPAddress, City, Country;
-let ip1Known = toscalar(geoFootprint | where IPAddress == signInIP1 | count) > 0;
-let ip2Known = toscalar(geoFootprint | where IPAddress == signInIP2 | count) > 0;
-geoFootprint
+let ip1Known = toscalar(GeoFootprint | where IPAddress == SignInIP1 | count) > 0;
+let ip2Known = toscalar(GeoFootprint | where IPAddress == SignInIP2 | count) > 0;
+GeoFootprint
 | summarize
     TotalSignins = sum(SigninCount),
     DistinctIPs = dcount(IPAddress),
@@ -1865,7 +1865,7 @@ geoFootprint
 // Tests both VPN (same device) and attacker (different device) scenarios
 // ============================================================
 // Scenario A: True positive - different devices
-let testSigninsTP = datatable(
+let TestSigninsTP = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1892,7 +1892,7 @@ let testSigninsTP = datatable(
         "singleFactorAuthentication", dynamic(null),
         "notApplied", "0", "sess-002"
 ];
-testSigninsTP
+TestSigninsTP
 | extend
     DeviceId = tostring(DeviceDetail.deviceId),
     DeviceOS = tostring(DeviceDetail.operatingSystem),
@@ -1913,7 +1913,7 @@ testSigninsTP
 // TEST: Query 5A - Token Replay Detection
 // Synthetic non-interactive sign-ins from anomalous IP
 // ============================================================
-let testNonInteractive = datatable(
+let TestNonInteractive = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1951,14 +1951,14 @@ let testNonInteractive = datatable(
         "Microsoft Graph", "Microsoft Graph", "0", "req-b02",
         dynamic({"city":"Moscow","countryOrRegion":"RU"}), "", "Mobile Apps and Desktop clients", false
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let signInIP2 = "198.51.100.42";
-let tokenWindow = 4h;
-testNonInteractive
-| where TimeGenerated between ((alertTime - tokenWindow) .. (alertTime + tokenWindow))
-| where UserPrincipalName == targetUser
-| where IPAddress == signInIP2
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let SignInIP2 = "198.51.100.42";
+let TokenWindow = 4h;
+TestNonInteractive
+| where TimeGenerated between ((AlertTime - TokenWindow) .. (AlertTime + TokenWindow))
+| where UserPrincipalName == TargetUser
+| where IPAddress == SignInIP2
 | summarize
     TotalNonInteractiveEvents = count(),
     SuccessfulEvents = countif(ResultType == "0"),
@@ -1988,7 +1988,7 @@ testNonInteractive
 // TEST: Query 6A/6B - Post-Sign-In Activity (Persistence + BEC)
 // Synthetic data: 6 malicious + 8 benign = 14 rows
 // ============================================================
-let testAuditLogs = datatable(
+let TestAuditLogs = datatable(
     TimeGenerated: datetime,
     OperationName: string,
     Category: string,
@@ -2029,7 +2029,7 @@ let testAuditLogs = datatable(
         dynamic([{"userPrincipalName":"other@contoso.com","displayName":"Other User","modifiedProperties":[]}]),
         "audit-b03"
 ];
-let testOfficeActivity = datatable(
+let TestOfficeActivity = datatable(
     TimeGenerated: datetime,
     Operation: string,
     OfficeWorkload: string,
@@ -2070,11 +2070,11 @@ let testOfficeActivity = datatable(
         "85.100.50.25:50000", dynamic([])
 ];
 // --- Test 6A: Directory changes ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
-testAuditLogs
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
+TestAuditLogs
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 | where OperationName in (
     "User registered security info", "User deleted security info",
     "Consent to application", "Add app role assignment to service principal",
@@ -2082,13 +2082,13 @@ testAuditLogs
     "Reset password (by admin)", "Add member to role"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | project
     TimeGenerated, OperationName,
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     TargetDisplayName = tostring(TargetResource.displayName),
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",

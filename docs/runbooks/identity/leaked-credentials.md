@@ -205,8 +205,8 @@ All queries in this runbook use the following shared input parameters. Replace t
 // ============================================================
 // SHARED INPUT PARAMETERS - Set these before running any query
 // ============================================================
-let targetUser = "user@contoso.com";          // UserPrincipalName from the risk event
-let alertTime = datetime(2026-02-22T10:00:00Z); // TimeGenerated of the risk event
+let TargetUser = "user@contoso.com";          // UserPrincipalName from the risk event
+let AlertTime = datetime(2026-02-22T10:00:00Z); // TimeGenerated of the risk event
 // NOTE: No signInIP parameter - leakedCredentials risk events
 // typically do not have an associated IP address
 ```
@@ -261,13 +261,13 @@ The goal of quick triage is to determine within 2-3 steps whether this alert req
 // Table: AADUserRiskEvents
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let lookbackWindow = 30d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let LookbackWindow = 30d;
 // --- Part 1: Get the leaked credential risk event ---
-let leakEvent = AADUserRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1d))
-    | where UserPrincipalName == targetUser
+let LeakEvent = AADUserRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "leakedCredentials"
     | project
         RiskTimeGenerated = TimeGenerated,
@@ -285,9 +285,9 @@ let leakEvent = AADUserRiskEvents
         Id
     | top 1 by RiskTimeGenerated desc;
 // --- Part 2: Check for compound risk (other risk events) ---
-let otherRiskEvents = AADUserRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1d))
-    | where UserPrincipalName == targetUser
+let OtherRiskEvents = AADUserRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType != "leakedCredentials"
     | summarize
         OtherRiskEventCount = count(),
@@ -295,9 +295,9 @@ let otherRiskEvents = AADUserRiskEvents
         OtherRiskLevels = make_set(RiskLevel),
         LatestOtherRisk = max(TimeGenerated);
 // --- Part 3: Combined output ---
-leakEvent
+LeakEvent
 | extend placeholder = 1
-| join kind=leftouter (otherRiskEvents | extend placeholder = 1) on placeholder
+| join kind=leftouter (OtherRiskEvents | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1
 | extend
     CompoundRiskAssessment = case(
@@ -343,7 +343,7 @@ leakEvent
 - Expected result: 1 row with risk event details and compound risk assessment
 
 **Tuning Guidance:**
-- **lookbackWindow**: Default 30d. Leaked credential detections can lag by days or weeks
+- **LookbackWindow**: Default 30d. Leaked credential detections can lag by days or weeks
 - **Compound risk**: If OtherRiskEventCount > 0, treat severity as escalated regardless of individual risk levels
 
 **Expected findings:**
@@ -380,12 +380,12 @@ leakEvent
 // Tables: AADRiskyUsers, AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let lookbackWindow = 90d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let LookbackWindow = 90d;
 // --- Part 1: Current risk state ---
-let riskState = AADRiskyUsers
-    | where UserPrincipalName == targetUser
+let RiskState = AADRiskyUsers
+    | where UserPrincipalName == TargetUser
     | top 1 by TimeGenerated desc
     | project
         UserPrincipalName,
@@ -396,8 +396,8 @@ let riskState = AADRiskyUsers
         RiskLastUpdatedDateTime,
         IsProcessing;
 // --- Part 2: Password change history ---
-let passwordChanges = AuditLogs
-    | where TimeGenerated > ago(lookbackWindow)
+let PasswordChanges = AuditLogs
+    | where TimeGenerated > ago(LookbackWindow)
     | where OperationName in (
         "Change user password",
         "Reset user password",
@@ -406,41 +406,41 @@ let passwordChanges = AuditLogs
         "Update StsRefreshTokenValidFrom"
     )
     | mv-expand TargetResource = TargetResources
-    | where tostring(TargetResource.userPrincipalName) == targetUser
-        or tostring(InitiatedBy.user.userPrincipalName) == targetUser
+    | where tostring(TargetResource.userPrincipalName) == TargetUser
+        or tostring(InitiatedBy.user.userPrincipalName) == TargetUser
     | project
         PasswordChangeTime = TimeGenerated,
         OperationName,
         InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
         InitiatedByApp = tostring(InitiatedBy.app.displayName),
         ChangeType = case(
-            OperationName has "self-service" or tostring(InitiatedBy.user.userPrincipalName) == targetUser,
+            OperationName has "self-service" or tostring(InitiatedBy.user.userPrincipalName) == TargetUser,
                 "Self-service password change",
-            OperationName has "admin" or tostring(InitiatedBy.user.userPrincipalName) != targetUser,
+            OperationName has "admin" or tostring(InitiatedBy.user.userPrincipalName) != TargetUser,
                 "Admin-initiated password reset",
             "System/automated change"
         )
     | top 5 by PasswordChangeTime desc;
 // --- Part 3: Most recent password change relative to alert ---
-let lastPasswordChange = toscalar(passwordChanges | top 1 by PasswordChangeTime desc | project PasswordChangeTime);
+let LastPasswordChange = toscalar(PasswordChanges | top 1 by PasswordChangeTime desc | project PasswordChangeTime);
 // --- Part 4: Combined output ---
-riskState
+RiskState
 | extend
-    LastPasswordChange = lastPasswordChange,
-    PasswordChangedAfterLeak = iff(isnotempty(lastPasswordChange) and lastPasswordChange > alertTime,
+    LastPasswordChange = LastPasswordChange,
+    PasswordChangedAfterLeak = iff(isnotempty(LastPasswordChange) and LastPasswordChange > AlertTime,
         "YES - Password was changed AFTER leak detection",
         "NO - Password has NOT been changed since leak detection"),
-    DaysSincePasswordChange = iff(isnotempty(lastPasswordChange),
-        datetime_diff("day", now(), lastPasswordChange),
+    DaysSincePasswordChange = iff(isnotempty(LastPasswordChange),
+        datetime_diff("day", now(), LastPasswordChange),
         -1),
     PasswordUrgency = case(
-        isnotempty(lastPasswordChange) and lastPasswordChange > alertTime,
+        isnotempty(LastPasswordChange) and LastPasswordChange > AlertTime,
             "LOW - Password already rotated after detection",
-        isnotempty(lastPasswordChange) and datetime_diff("day", alertTime, lastPasswordChange) < 30,
+        isnotempty(LastPasswordChange) and datetime_diff("day", AlertTime, LastPasswordChange) < 30,
             "MEDIUM - Password changed recently but before detection",
-        isnotempty(lastPasswordChange) and datetime_diff("day", alertTime, lastPasswordChange) >= 30,
+        isnotempty(LastPasswordChange) and datetime_diff("day", AlertTime, LastPasswordChange) >= 30,
             "HIGH - Password unchanged for 30+ days before detection",
-        isempty(lastPasswordChange),
+        isempty(LastPasswordChange),
             "CRITICAL - No password change detected in 90-day window",
         "UNKNOWN"
     )
@@ -452,7 +452,7 @@ riskState
 - Expected result: 1 row with risk state, last password change, and urgency assessment
 
 **Tuning Guidance:**
-- **lookbackWindow for password changes**: Default 90d. Extend to 180d for very old accounts
+- **LookbackWindow for password changes**: Default 90d. Extend to 180d for very old accounts
 - **If no password change found**: The password may have been set >90 days ago and never changed. This significantly increases risk
 
 **Expected findings:**
@@ -499,15 +499,15 @@ riskState
 // MANDATORY - Do not skip this query
 // Expected runtime: 5-15 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let baselinePeriod = 30d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let BaselinePeriod = 30d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 // --- Part 1: Geographic and device footprint ---
-let baselineSignins = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let BaselineSignins = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend
         City = tostring(LocationDetails.city),
@@ -516,7 +516,7 @@ let baselineSignins = SigninLogs
         DeviceOS = tostring(DeviceDetail.operatingSystem),
         DeviceBrowser = tostring(DeviceDetail.browser);
 // --- Part 2: Summarize baseline ---
-let baselineSummary = baselineSignins
+let BaselineSummary = BaselineSignins
     | summarize
         TotalSignins = count(),
         DistinctIPs = dcount(IPAddress),
@@ -534,7 +534,7 @@ let baselineSummary = baselineSignins
         LastSignin = max(TimeGenerated),
         ActiveDays = dcount(bin(TimeGenerated, 1d));
 // --- Part 3: Time-of-day pattern ---
-let timePattern = baselineSignins
+let TimePattern = BaselineSignins
     | extend HourOfDay = hourofday(TimeGenerated)
     | summarize HourCounts = count() by HourOfDay
     | order by HourOfDay asc
@@ -543,19 +543,19 @@ let timePattern = baselineSignins
         OffHourSignins = sumif(HourCounts, HourOfDay < 8 or HourOfDay > 18),
         PeakHour = arg_max(HourCounts, HourOfDay);
 // --- Part 4: Failure baseline ---
-let failureBaseline = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let FailureBaseline = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType != "0"
     | summarize
         FailedSignins = count(),
         FailedDistinctIPs = dcount(IPAddress),
         FailureResultCodes = make_set(ResultType, 10);
 // --- Part 5: Combined output ---
-baselineSummary
+BaselineSummary
 | extend placeholder = 1
-| join kind=leftouter (timePattern | extend placeholder = 1) on placeholder
-| join kind=leftouter (failureBaseline | extend placeholder = 1) on placeholder
+| join kind=leftouter (TimePattern | extend placeholder = 1) on placeholder
+| join kind=leftouter (FailureBaseline | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1, placeholder2
 | extend
     AvgSigninsPerDay = round(toreal(TotalSignins) / toreal(ActiveDays), 1),
@@ -573,10 +573,10 @@ baselineSummary
 - Query scans 30 days of SigninLogs for a single user - moderate volume
 - The time-of-day pattern helps identify off-hours sign-ins as anomalous
 - Failure baseline is important for leaked credentials because attackers often test credentials with failed attempts first
-- If the user has >50 distinct IPs, consider reducing baselinePeriod to 14d
+- If the user has >50 distinct IPs, consider reducing BaselinePeriod to 14d
 
 **Tuning Guidance:**
-- **baselinePeriod**: Default 30d. Use 14d for very active users, 60d for infrequent users
+- **BaselinePeriod**: Default 30d. Use 14d for very active users, 60d for infrequent users
 - **BaselineRichness**: If INSUFFICIENT, the user may be a new account or inactive. New accounts with leaked credentials are especially risky
 
 **Expected findings:**
@@ -614,30 +614,30 @@ baselineSummary
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let baselinePeriod = 30d;
-let postLeakWindow = 7d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let BaselinePeriod = 30d;
+let PostLeakWindow = 7d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 // --- Part 1: Build baseline IP set ---
-let baselineIPs = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let BaselineIPs = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct IPAddress;
 // --- Part 2: Build baseline country set ---
-let baselineCountries = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let BaselineCountries = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend Country = tostring(LocationDetails.countryOrRegion)
     | distinct Country;
 // --- Part 3: Find ALL sign-ins (success + failure) from non-baseline IPs ---
-let anomalousSignins = SigninLogs
-    | where TimeGenerated between ((alertTime - 7d) .. (alertTime + postLeakWindow))
-    | where UserPrincipalName == targetUser
-    | where IPAddress !in (baselineIPs)
+let AnomalousSignins = SigninLogs
+    | where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + PostLeakWindow))
+    | where UserPrincipalName == TargetUser
+    | where IPAddress !in (BaselineIPs)
     | extend
         City = tostring(LocationDetails.city),
         Country = tostring(LocationDetails.countryOrRegion),
@@ -675,8 +675,8 @@ let anomalousSignins = SigninLogs
             ResultType == "50057", "ACCOUNT DISABLED",
             strcat("OTHER - ", ResultType)
         ),
-        IsNewCountry = Country !in (baselineCountries),
-        MinutesFromAlert = datetime_diff("minute", TimeGenerated, alertTime)
+        IsNewCountry = Country !in (BaselineCountries),
+        MinutesFromAlert = datetime_diff("minute", TimeGenerated, AlertTime)
     | extend
         SigninRiskAssessment = case(
             ResultType == "0" and IsNewCountry and AuthenticationRequirement == "singleFactorAuthentication",
@@ -695,7 +695,7 @@ let anomalousSignins = SigninLogs
         )
     | order by SigninTime desc;
 // --- Part 4: Summary ---
-anomalousSignins
+AnomalousSignins
 | summarize
     TotalAnomalousSignins = count(),
     SuccessfulFromNewIP = countif(ResultType == "0"),
@@ -740,24 +740,24 @@ anomalousSignins
 // Table: AADNonInteractiveUserSignInLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let baselinePeriod = 30d;
-let postLeakWindow = 7d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let BaselinePeriod = 30d;
+let PostLeakWindow = 7d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 // Build baseline IP set from interactive sign-ins
-let baselineIPs = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let BaselineIPs = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct IPAddress;
 // Check non-interactive sign-ins from unknown IPs
 AADNonInteractiveUserSignInLogs
-| where TimeGenerated between ((alertTime - 7d) .. (alertTime + postLeakWindow))
-| where UserPrincipalName == targetUser
+| where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + PostLeakWindow))
+| where UserPrincipalName == TargetUser
 | where ResultType == "0"
-| where IPAddress !in (baselineIPs)
+| where IPAddress !in (BaselineIPs)
 | summarize
     TotalEvents = count(),
     DistinctIPs = dcount(IPAddress),
@@ -783,7 +783,7 @@ AADNonInteractiveUserSignInLogs
 - Expected result for 4B: summary of non-interactive activity from unknown IPs
 
 **Tuning Guidance:**
-- **postLeakWindow**: Default 7d. Expand to 14d or 30d for thorough investigation of long-standing leaks
+- **PostLeakWindow**: Default 7d. Expand to 14d or 30d for thorough investigation of long-standing leaks
 - **Credential testing threshold**: Default 5 failed attempts. In high-security environments, lower to 3
 - **Baseline IP comparison**: If user has >50 baseline IPs, the anomaly detection may be less sensitive
 
@@ -822,11 +822,11 @@ AADNonInteractiveUserSignInLogs
 // Table: AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let postLeakWindow = 7d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let PostLeakWindow = 7d;
 AuditLogs
-| where TimeGenerated between ((alertTime - 7d) .. (alertTime + postLeakWindow))
+| where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + PostLeakWindow))
 | where OperationName in (
     "User registered security info",
     "User deleted security info",
@@ -848,8 +848,8 @@ AuditLogs
     "Add eligible member to role"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -865,7 +865,7 @@ AuditLogs
     TargetUPN,
     TargetDisplayName,
     ModifiedProperties,
-    DaysFromAlert = datetime_diff("day", TimeGenerated, alertTime),
+    DaysFromAlert = datetime_diff("day", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",
@@ -891,12 +891,12 @@ AuditLogs
 // Table: OfficeActivity
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let postLeakWindow = 7d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let PostLeakWindow = 7d;
 OfficeActivity
-| where TimeGenerated between ((alertTime - 7d) .. (alertTime + postLeakWindow))
-| where UserId == targetUser
+| where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + PostLeakWindow))
+| where UserId == TargetUser
 | extend CleanClientIP = extract(@"(\d+\.\d+\.\d+\.\d+)", 1, ClientIP)
 | project
     TimeGenerated,
@@ -905,7 +905,7 @@ OfficeActivity
     UserId,
     CleanClientIP,
     RawClientIP = ClientIP,
-    DaysFromAlert = datetime_diff("day", TimeGenerated, alertTime),
+    DaysFromAlert = datetime_diff("day", TimeGenerated, AlertTime),
     RiskCategory = case(
         Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule"),
             "CRITICAL - INBOX RULE",
@@ -937,12 +937,12 @@ OfficeActivity
 // Table: OfficeActivity
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let postLeakWindow = 7d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let PostLeakWindow = 7d;
 OfficeActivity
-| where TimeGenerated between ((alertTime - 7d) .. (alertTime + postLeakWindow))
-| where UserId == targetUser
+| where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + PostLeakWindow))
+| where UserId == TargetUser
 | where Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule")
 | mv-expand Parameter = parse_json(Parameters)
 | summarize
@@ -989,7 +989,7 @@ OfficeActivity
 - Unlike RB-0001/RB-0002 which check 4h post-sign-in windows, leaked credentials may have been in use for days before detection, so we check a wider window
 
 **Tuning Guidance:**
-- **postLeakWindow**: Default 7d. For fast triage use 3d, for thorough investigation expand to 30d
+- **PostLeakWindow**: Default 7d. For fast triage use 3d, for thorough investigation expand to 30d
 - **Pre-leak activity**: We also check 7 days BEFORE the alert because the credentials may have been used before Microsoft detected the leak
 
 **Expected findings:**
@@ -1025,13 +1025,13 @@ OfficeActivity
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let assessmentPeriod = 30d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let AssessmentPeriod = 30d;
 // --- Part 1: MFA usage analysis ---
-let mfaAnalysis = SigninLogs
-    | where TimeGenerated > (alertTime - assessmentPeriod)
-    | where UserPrincipalName == targetUser
+let MfaAnalysis = SigninLogs
+    | where TimeGenerated > (AlertTime - AssessmentPeriod)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | summarize
         TotalSuccessfulSignins = count(),
@@ -1040,9 +1040,9 @@ let mfaAnalysis = SigninLogs
         MFAMethods = make_set_if(tostring(MfaDetail.authMethod), isnotempty(MfaDetail)),
         DistinctApps = make_set(AppDisplayName, 20);
 // --- Part 2: Legacy auth detection ---
-let legacyAuth = SigninLogs
-    | where TimeGenerated > (alertTime - assessmentPeriod)
-    | where UserPrincipalName == targetUser
+let LegacyAuth = SigninLogs
+    | where TimeGenerated > (AlertTime - AssessmentPeriod)
+    | where UserPrincipalName == TargetUser
     | where ClientAppUsed in (
         "Exchange ActiveSync",
         "IMAP4", "POP3", "SMTP",
@@ -1058,19 +1058,19 @@ let legacyAuth = SigninLogs
         LegacyIPs = make_set(IPAddress, 10),
         LegacyApps = make_set(AppDisplayName, 10);
 // --- Part 3: Conditional Access assessment ---
-let caAnalysis = SigninLogs
-    | where TimeGenerated > (alertTime - assessmentPeriod)
-    | where UserPrincipalName == targetUser
+let CaAnalysis = SigninLogs
+    | where TimeGenerated > (AlertTime - AssessmentPeriod)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | summarize
         CASuccess = countif(ConditionalAccessStatus == "success"),
         CANotApplied = countif(ConditionalAccessStatus == "notApplied"),
         CAFailure = countif(ConditionalAccessStatus == "failure");
 // --- Part 4: Combined output ---
-mfaAnalysis
+MfaAnalysis
 | extend placeholder = 1
-| join kind=leftouter (legacyAuth | extend placeholder = 1) on placeholder
-| join kind=leftouter (caAnalysis | extend placeholder = 1) on placeholder
+| join kind=leftouter (LegacyAuth | extend placeholder = 1) on placeholder
+| join kind=leftouter (CaAnalysis | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1, placeholder2
 | extend
     LegacyAuthEvents = coalesce(LegacyAuthEvents, 0),
@@ -1149,12 +1149,12 @@ mfaAnalysis
 // Expected runtime: <3 seconds
 // ============================================================
 // Replace with anomalous IPs from Query 4A results
-let anomalousIPs = dynamic(["198.51.100.42", "203.0.113.99"]);
+let AnomalousIPs = dynamic(["198.51.100.42", "203.0.113.99"]);
 ThreatIntelligenceIndicator
 | where isnotempty(NetworkIP)
 | where Active == true
 | where ExpirationDateTime > now()
-| where NetworkIP in (anomalousIPs)
+| where NetworkIP in (AnomalousIPs)
 | where ConfidenceScore >= 50
 | project
     NetworkIP,
@@ -1185,12 +1185,12 @@ ThreatIntelligenceIndicator
 // Expected runtime: 5-10 seconds
 // ============================================================
 // Replace with anomalous IPs from Query 4A results
-let anomalousIPs = dynamic(["198.51.100.42", "203.0.113.99"]);
-let targetUser = "user@contoso.com";
-let lookbackPeriod = 30d;
+let AnomalousIPs = dynamic(["198.51.100.42", "203.0.113.99"]);
+let TargetUser = "user@contoso.com";
+let LookbackPeriod = 30d;
 SigninLogs
-| where TimeGenerated > ago(lookbackPeriod)
-| where IPAddress in (anomalousIPs)
+| where TimeGenerated > ago(LookbackPeriod)
+| where IPAddress in (AnomalousIPs)
 | where ResultType == "0"
 | summarize
     TotalSignins = count(),
@@ -1206,15 +1206,15 @@ SigninLogs
             "LIKELY CORPORATE - Used by 10+ users (shared exit IP)",
         DistinctUsers > 3,
             "POSSIBLY CORPORATE - Used by multiple users",
-        DistinctUsers == 1 and UserList has targetUser,
+        DistinctUsers == 1 and UserList has TargetUser,
             "SINGLE USER - Only used by the target user",
-        DistinctUsers == 1 and not(UserList has targetUser),
+        DistinctUsers == 1 and not(UserList has TargetUser),
             "SINGLE OTHER USER - Used by a different user only",
         DistinctUsers == 0,
             "NEVER SEEN - IP has never been used for successful sign-ins",
         "UNKNOWN"
     ),
-    IsTargetUserIncluded = iff(UserList has targetUser, "Yes", "No")
+    IsTargetUserIncluded = iff(UserList has TargetUser, "Yes", "No")
 | order by DistinctUsers desc
 ```
 
@@ -1225,7 +1225,7 @@ SigninLogs
 
 **Tuning Guidance:**
 - **TI ConfidenceScore**: Default >= 50. Increase to >= 80 for high precision
-- **anomalousIPs**: Replace the placeholder array with actual IPs from Query 4A results
+- **AnomalousIPs**: Replace the placeholder array with actual IPs from Query 4A results
 
 **Expected findings:**
 
@@ -1466,7 +1466,7 @@ All queries include datatable-based inline tests with synthetic data. Each test 
 // TEST: Query 1 - Extract Leaked Credential Risk Event
 // Synthetic data: 6 risk event rows (2 leaked + 4 other types)
 // ============================================================
-let testRiskEvents = datatable(
+let TestRiskEvents = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     RiskEventType: string,
@@ -1507,13 +1507,13 @@ let testRiskEvents = datatable(
         "dismissed", "", "realtime", "203.0.113.10",
         dynamic({"city":"London"}), dynamic(null), "corr-006", "risk-006"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let lookbackWindow = 30d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let LookbackWindow = 30d;
 // Part 1: Get the leaked credential risk event
-let leakEvent = testRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 1d))
-    | where UserPrincipalName == targetUser
+let LeakEvent = TestRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 1d))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "leakedCredentials"
     | project
         RiskTimeGenerated = TimeGenerated, UserPrincipalName, RiskEventType,
@@ -1521,16 +1521,16 @@ let leakEvent = testRiskEvents
         AdditionalInfo, Id
     | top 1 by RiskTimeGenerated desc;
 // Part 2: Check for compound risk
-let otherRiskEvents = testRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + 7d))
-    | where UserPrincipalName == targetUser
+let OtherRiskEvents = TestRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 7d))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType != "leakedCredentials"
     | summarize
         OtherRiskEventCount = count(),
         OtherRiskTypes = make_set(RiskEventType);
-leakEvent
+LeakEvent
 | extend placeholder = 1
-| join kind=leftouter (otherRiskEvents | extend placeholder = 1) on placeholder
+| join kind=leftouter (OtherRiskEvents | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1
 | extend
     CompoundRiskAssessment = case(
@@ -1555,7 +1555,7 @@ leakEvent
 // TEST: Query 2 - Password Timeline
 // Synthetic data: 8 audit log rows for password operations
 // ============================================================
-let testRiskyUsers = datatable(
+let TestRiskyUsers = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     UserDisplayName: string,
@@ -1570,7 +1570,7 @@ let testRiskyUsers = datatable(
     datetime(2026-02-22T11:00:00Z), "other@contoso.com", "Other User", "low",
         "remediated", "adminDismissedAllRiskForUser", datetime(2026-02-22T11:00:00Z), false
 ];
-let testAuditLogs = datatable(
+let TestAuditLogs = datatable(
     TimeGenerated: datetime,
     OperationName: string,
     Category: string,
@@ -1596,31 +1596,31 @@ let testAuditLogs = datatable(
         dynamic({"user":{"userPrincipalName":"admin@contoso.com"}}),
         dynamic([{"userPrincipalName":"user@contoso.com","displayName":"Test User"}]), "pwd-004"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
 // Get risk state
-let riskState = testRiskyUsers
-    | where UserPrincipalName == targetUser
+let RiskState = TestRiskyUsers
+    | where UserPrincipalName == TargetUser
     | top 1 by TimeGenerated desc
     | project UserPrincipalName, CurrentRiskLevel = RiskLevel, CurrentRiskState = RiskState;
 // Get password changes
-let passwordChanges = testAuditLogs
+let PasswordChanges = TestAuditLogs
     | where OperationName in ("Change user password", "Reset user password", "Reset password (by admin)", "Change password (self-service)")
     | mv-expand TargetResource = TargetResources
-    | where tostring(TargetResource.userPrincipalName) == targetUser
-        or tostring(InitiatedBy.user.userPrincipalName) == targetUser
+    | where tostring(TargetResource.userPrincipalName) == TargetUser
+        or tostring(InitiatedBy.user.userPrincipalName) == TargetUser
     | project PasswordChangeTime = TimeGenerated, OperationName;
-let lastPasswordChange = toscalar(passwordChanges | top 1 by PasswordChangeTime desc | project PasswordChangeTime);
-riskState
+let LastPasswordChange = toscalar(PasswordChanges | top 1 by PasswordChangeTime desc | project PasswordChangeTime);
+RiskState
 | extend
-    LastPasswordChange = lastPasswordChange,
-    PasswordChangedAfterLeak = iff(isnotempty(lastPasswordChange) and lastPasswordChange > alertTime,
+    LastPasswordChange = LastPasswordChange,
+    PasswordChangedAfterLeak = iff(isnotempty(LastPasswordChange) and LastPasswordChange > AlertTime,
         "YES", "NO"),
-    DaysSincePasswordChange = iff(isnotempty(lastPasswordChange),
-        datetime_diff("day", alertTime, lastPasswordChange), -1),
+    DaysSincePasswordChange = iff(isnotempty(LastPasswordChange),
+        datetime_diff("day", AlertTime, LastPasswordChange), -1),
     PasswordUrgency = case(
-        isnotempty(lastPasswordChange) and lastPasswordChange > alertTime, "LOW",
-        isnotempty(lastPasswordChange) and datetime_diff("day", alertTime, lastPasswordChange) >= 30, "HIGH",
+        isnotempty(LastPasswordChange) and LastPasswordChange > AlertTime, "LOW",
+        isnotempty(LastPasswordChange) and datetime_diff("day", AlertTime, LastPasswordChange) >= 30, "HIGH",
         "CRITICAL"
     )
 // Expected: CurrentRiskLevel=high, CurrentRiskState=atRisk
@@ -1637,7 +1637,7 @@ riskState
 // TEST: Query 3 - Sign-In Baseline (30-day)
 // Synthetic data: 10 baseline sign-ins from known locations
 // ============================================================
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1708,19 +1708,19 @@ let testSigninLogs = datatable(
         "Microsoft Exchange Online", "singleFactorAuthentication",
         dynamic(null), "Exchange ActiveSync", "notApplied", "0"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let baselineStart = alertTime - 30d;
-let baselineEnd = alertTime - 1d;
-let baselineSignins = testSigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let BaselineStart = AlertTime - 30d;
+let BaselineEnd = AlertTime - 1d;
+let BaselineSignins = TestSigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend
         City = tostring(LocationDetails.city),
         Country = tostring(LocationDetails.countryOrRegion),
         DeviceId = tostring(DeviceDetail.deviceId);
-baselineSignins
+BaselineSignins
 | summarize
     TotalSignins = count(),
     DistinctIPs = dcount(IPAddress),
@@ -1754,9 +1754,9 @@ baselineSignins
 // TEST: Query 4A - Anomalous Sign-In Detection
 // Synthetic data: 12 rows (6 anomalous + 6 normal/filtered)
 // ============================================================
-let baselineIPs = dynamic(["85.100.50.25", "85.100.50.30", "100.64.0.5", "10.1.1.50"]);
-let baselineCountries = dynamic(["TR"]);
-let testSignins = datatable(
+let BaselineIPs = dynamic(["85.100.50.25", "85.100.50.30", "100.64.0.5", "10.1.1.50"]);
+let BaselineCountries = dynamic(["TR"]);
+let TestSignins = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -1844,22 +1844,22 @@ let testSignins = datatable(
         "Mozilla/5.0 Chrome/120", "Microsoft Office 365", "Microsoft Office 365", "Browser",
         "multiFactorAuthentication", dynamic({"authMethod":"PhoneAppNotification"}), "success", "0"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-testSignins
-| where TimeGenerated between ((alertTime - 7d) .. (alertTime + 7d))
-| where UserPrincipalName == targetUser
-| where IPAddress !in (baselineIPs)
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+TestSignins
+| where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + 7d))
+| where UserPrincipalName == TargetUser
+| where IPAddress !in (BaselineIPs)
 | extend
     Country = tostring(LocationDetails.countryOrRegion),
-    IsNewCountry = tostring(LocationDetails.countryOrRegion) !in (baselineCountries)
+    IsNewCountry = tostring(LocationDetails.countryOrRegion) !in (BaselineCountries)
 | summarize
     TotalAnomalousSignins = count(),
     SuccessfulFromNewIP = countif(ResultType == "0"),
     FailedFromNewIP = countif(ResultType != "0"),
     DistinctAnomalousIPs = dcount(IPAddress),
     AnomalousCountries = make_set(Country),
-    CriticalEvents = countif(ResultType == "0" and tostring(LocationDetails.countryOrRegion) !in (baselineCountries)),
+    CriticalEvents = countif(ResultType == "0" and tostring(LocationDetails.countryOrRegion) !in (BaselineCountries)),
     CredentialTestingEvents = countif(ResultType == "50126"),
     MFABlockedEvents = countif(ResultType == "50074")
 | extend
@@ -1886,7 +1886,7 @@ testSignins
 // TEST: Query 5A/5B - Post-Sign-In Persistence and BEC
 // Synthetic data: 6 malicious + 8 benign = 14 rows
 // ============================================================
-let testAuditLogs = datatable(
+let TestAuditLogs = datatable(
     TimeGenerated: datetime,
     OperationName: string,
     Category: string,
@@ -1927,7 +1927,7 @@ let testAuditLogs = datatable(
         dynamic([{"userPrincipalName":"other@contoso.com"}]),
         "audit-b03"
 ];
-let testOfficeActivity = datatable(
+let TestOfficeActivity = datatable(
     TimeGenerated: datetime,
     Operation: string,
     OfficeWorkload: string,
@@ -1963,23 +1963,23 @@ let testOfficeActivity = datatable(
         "85.100.50.25:50000", dynamic([])
 ];
 // Test 5A: Directory changes
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
-let postLeakWindow = 7d;
-testAuditLogs
-| where TimeGenerated between ((alertTime - 7d) .. (alertTime + postLeakWindow))
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
+let PostLeakWindow = 7d;
+TestAuditLogs
+| where TimeGenerated between ((AlertTime - 7d) .. (AlertTime + PostLeakWindow))
 | where OperationName in (
     "User registered security info", "Consent to application", "Register device",
     "Reset password (by admin)"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | project
     TimeGenerated, OperationName,
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     TargetDisplayName = tostring(TargetResource.displayName),
-    DaysFromAlert = datetime_diff("day", TimeGenerated, alertTime),
+    DaysFromAlert = datetime_diff("day", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",
@@ -1998,7 +1998,7 @@ testAuditLogs
 // TEST: Query 6 - MFA and Legacy Auth Assessment
 // Synthetic data: 8 sign-in rows testing MFA and legacy auth
 // ============================================================
-let testSignins = datatable(
+let TestSignins = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -2039,29 +2039,29 @@ let testSignins = datatable(
         "Microsoft Office 365", "Browser", "singleFactorAuthentication",
         dynamic(null), "notApplied", "50126"
 ];
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-22T10:00:00Z);
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-22T10:00:00Z);
 // MFA analysis
-let mfaAnalysis = testSignins
-    | where TimeGenerated > (alertTime - 30d)
-    | where UserPrincipalName == targetUser
+let MfaAnalysis = TestSignins
+    | where TimeGenerated > (AlertTime - 30d)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | summarize
         TotalSuccessfulSignins = count(),
         MFAEnforced = countif(AuthenticationRequirement == "multiFactorAuthentication"),
         SFAOnly = countif(AuthenticationRequirement == "singleFactorAuthentication");
 // Legacy auth
-let legacyAuth = testSignins
-    | where TimeGenerated > (alertTime - 30d)
-    | where UserPrincipalName == targetUser
+let LegacyAuth = TestSignins
+    | where TimeGenerated > (AlertTime - 30d)
+    | where UserPrincipalName == TargetUser
     | where ClientAppUsed in ("Exchange ActiveSync", "IMAP4", "POP3", "SMTP", "Other clients", "Authenticated SMTP")
     | summarize
         LegacyAuthEvents = count(),
         LegacySuccessful = countif(ResultType == "0"),
         LegacyProtocols = make_set(ClientAppUsed);
-mfaAnalysis
+MfaAnalysis
 | extend placeholder = 1
-| join kind=leftouter (legacyAuth | extend placeholder = 1) on placeholder
+| join kind=leftouter (LegacyAuth | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1
 | extend
     LegacyAuthEvents = coalesce(LegacyAuthEvents, 0),

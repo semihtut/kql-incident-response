@@ -273,9 +273,9 @@ All queries in this runbook use the following shared input parameters. Replace t
 // ============================================================
 // SHARED INPUT PARAMETERS - Set these before running any query
 // ============================================================
-let targetUser = "user@contoso.com";          // UserPrincipalName from the alert
-let alertTime = datetime(2026-02-21T14:30:00Z); // TimeGenerated of the risk event
-let alertIP = "198.51.100.42";                // Source IP from the risk event
+let TargetUser = "user@contoso.com";          // UserPrincipalName from the alert
+let AlertTime = datetime(2026-02-21T14:30:00Z); // TimeGenerated of the risk event
+let AlertIP = "198.51.100.42";                // Source IP from the risk event
 ```
 
 ---
@@ -329,18 +329,18 @@ The goal of quick triage is to determine within 2-3 steps whether this alert can
 // Tables: AADUserRiskEvents, SigninLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let alertIP = "198.51.100.42";
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let AlertIP = "198.51.100.42";
 // Lookback window around the alert time to catch the matching sign-in
-let lookbackWindow = 2h;
+let LookbackWindow = 2h;
 // --- Part 1: Get the risk event ---
-let riskEvent = AADUserRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let RiskEvent = AADUserRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "unfamiliarFeatures"
     // IpAddress uses capital 'A' in this table (not IPAddress)
-    | where IpAddress == alertIP
+    | where IpAddress == AlertIP
     | project
         RiskTimeGenerated = TimeGenerated,
         UserPrincipalName,
@@ -353,9 +353,9 @@ let riskEvent = AADUserRiskEvents
         Id;
 // --- Part 2: Get the full sign-in record ---
 // Join on CorrelationId to find the exact sign-in that triggered the risk event
-let signinDetails = SigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let SigninDetails = SigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     // ResultType is a STRING, not int (Hasan's gotcha)
     | project
         SigninTimeGenerated = TimeGenerated,
@@ -383,8 +383,8 @@ let signinDetails = SigninLogs
         CorrelationId,
         SessionId;
 // --- Combine risk event with sign-in details ---
-riskEvent
-| join kind=inner signinDetails on CorrelationId, UserPrincipalName
+RiskEvent
+| join kind=inner SigninDetails on CorrelationId, UserPrincipalName
 | project
     // Risk event context
     RiskTimeGenerated,
@@ -464,7 +464,7 @@ riskEvent
 - If the join returns 0 rows, the risk event may have been an offline detection where the CorrelationId does not match. In that case, try matching on UserPrincipalName + time proximity instead
 
 **Tuning Guidance:**
-- **lookbackWindow**: Default 2h. Increase to 6h if the risk event was an offline detection (DetectionTimingType == "offline"), as the TimeGenerated may lag significantly behind the actual sign-in
+- **LookbackWindow**: Default 2h. Increase to 6h if the risk event was an offline detection (DetectionTimingType == "offline"), as the TimeGenerated may lag significantly behind the actual sign-in
 - **If no CorrelationId match**: Fall back to joining on UserPrincipalName + IPAddress within a 30-minute window
 
 **Expected findings:**
@@ -512,10 +512,10 @@ riskEvent
 //       use Query 2A-Fallback below
 // Expected runtime: <3 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
+let TargetUser = "user@contoso.com";
 // IdentityInfo is a state table - get the latest record per user
 IdentityInfo
-| where AccountUPN == targetUser
+| where AccountUPN == TargetUser
 | summarize arg_max(TimeGenerated, *) by AccountUPN
 | project
     AccountUPN,
@@ -551,15 +551,15 @@ IdentityInfo
 // Table: AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
+let TargetUser = "user@contoso.com";
 AuditLogs
 | where TimeGenerated > ago(90d)
 | where Category == "RoleManagement"
 | where OperationName has_any ("Add member to role", "Add eligible member to role")
 // Extract the target user from TargetResources (dynamic array)
 | mv-expand TargetResource = TargetResources
-| where tostring(TargetResource.userPrincipalName) == targetUser
-    or tostring(TargetResource.displayName) has targetUser
+| where tostring(TargetResource.userPrincipalName) == TargetUser
+    or tostring(TargetResource.displayName) has TargetUser
 | project
     TimeGenerated,
     OperationName,
@@ -581,12 +581,12 @@ AuditLogs
 // Table: AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
 // Check 72 hours before and after the alert
-let changeWindow = 72h;
+let ChangeWindow = 72h;
 AuditLogs
-| where TimeGenerated between ((alertTime - changeWindow) .. (alertTime + changeWindow))
+| where TimeGenerated between ((AlertTime - ChangeWindow) .. (AlertTime + ChangeWindow))
 // Filter for operations relevant to account compromise
 | where OperationName in (
     // Password changes
@@ -617,8 +617,8 @@ AuditLogs
 )
 // Check if the target user is either the actor or the target
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -635,16 +635,16 @@ AuditLogs
     TargetDisplayName,
     ModifiedProperties,
     // Flag operations occurring AFTER the alert as high priority
-    TimingRelativeToAlert = iff(TimeGenerated > alertTime, "AFTER ALERT", "BEFORE ALERT"),
+    TimingRelativeToAlert = iff(TimeGenerated > AlertTime, "AFTER ALERT", "BEFORE ALERT"),
     // Flag suspicious patterns
     SuspiciousIndicator = case(
-        OperationName has "security info" and TimeGenerated > alertTime,
+        OperationName has "security info" and TimeGenerated > AlertTime,
             "CRITICAL - MFA change after alert",
-        OperationName has "password" and TimeGenerated > alertTime,
+        OperationName has "password" and TimeGenerated > AlertTime,
             "CRITICAL - Password change after alert",
         OperationName has "Consent to application",
             "HIGH - App consent granted",
-        OperationName has "Register device" and TimeGenerated > alertTime,
+        OperationName has "Register device" and TimeGenerated > AlertTime,
             "HIGH - New device registered after alert",
         ""
     ),
@@ -655,12 +655,12 @@ AuditLogs
 **Performance Notes:**
 - Query 2A: Single-row lookup from IdentityInfo - very fast
 - Query 2B: Scans 144 hours (6 days) of AuditLogs filtered by specific OperationName values - fast due to narrow filter
-- If the organization has high AuditLogs volume (>1M events/day), consider reducing changeWindow to 24h for initial triage
+- If the organization has high AuditLogs volume (>1M events/day), consider reducing ChangeWindow to 24h for initial triage
 
 **Tuning Guidance:**
 - **Privileged roles list**: Adjust the `has_any` list in Query 2A to match the organization's definition of privileged roles
 - **High-value departments**: Adjust the `in` list in Query 2A based on the organization's structure
-- **changeWindow**: Default 72h. Reduce to 24h for faster triage, expand to 7d for deeper historical analysis
+- **ChangeWindow**: Default 72h. Reduce to 24h for faster triage, expand to 7d for deeper historical analysis
 
 **Expected findings:**
 
@@ -710,17 +710,17 @@ AuditLogs
 // MANDATORY - Do not skip this query
 // Expected runtime: 5-15 seconds (depends on user's sign-in volume)
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let alertIP = "198.51.100.42";
-let baselinePeriod = 30d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let AlertIP = "198.51.100.42";
+let BaselinePeriod = 30d;
 // Baseline window: from 30d ago to 1d ago (exclude recent day to avoid contamination)
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 // --- Part 1: Calculate daily aggregates over baseline period ---
-let dailyBaseline = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let DailyBaseline = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     // Only successful sign-ins for behavior baseline (ResultType is STRING)
     | where ResultType == "0"
     | summarize
@@ -733,7 +733,7 @@ let dailyBaseline = SigninLogs
         DistinctBrowsers = dcount(tostring(DeviceDetail.browser))
         by bin(TimeGenerated, 1d);
 // --- Part 2: Calculate statistical baseline from daily aggregates ---
-let baselineStats = dailyBaseline
+let BaselineStats = DailyBaseline
     | summarize
         BaselineDays = count(),
         // Sign-in volume
@@ -747,49 +747,49 @@ let baselineStats = dailyBaseline
         AvgDistinctLocations = avg(DistinctLocations),
         MaxDistinctLocations = max(DistinctLocations);
 // --- Part 3: Collect all known values from baseline ---
-let knownIPs = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let KnownIPs = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct IPAddress;
-let knownCountries = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let KnownCountries = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct tostring(Location.countryOrRegion);
-let knownCities = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let KnownCities = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct tostring(Location.city);
-let knownApps = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let KnownApps = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct AppDisplayName;
-let knownDevices = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let KnownDevices = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct tostring(DeviceDetail.operatingSystem);
-let knownBrowsers = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let KnownBrowsers = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | distinct tostring(DeviceDetail.browser);
 // --- Part 4: Analyze typical sign-in hours ---
-let typicalHours = SigninLogs
-    | where TimeGenerated between (baselineStart .. baselineEnd)
-    | where UserPrincipalName == targetUser
+let TypicalHours = SigninLogs
+    | where TimeGenerated between (BaselineStart .. BaselineEnd)
+    | where UserPrincipalName == TargetUser
     | where ResultType == "0"
     | extend HourOfDay = hourofday(TimeGenerated)
     | summarize SigninsPerHour = count() by HourOfDay
     | order by HourOfDay asc;
 // --- Part 5: Get the current sign-in details and compare ---
-let currentSignin = SigninLogs
-    | where TimeGenerated between ((alertTime - 2h) .. (alertTime + 1h))
-    | where UserPrincipalName == targetUser
-    | where IPAddress == alertIP
+let CurrentSignin = SigninLogs
+    | where TimeGenerated between ((AlertTime - 2h) .. (AlertTime + 1h))
+    | where UserPrincipalName == TargetUser
+    | where IPAddress == AlertIP
     | take 1
     | extend
         CurrentIP = IPAddress,
@@ -800,17 +800,17 @@ let currentSignin = SigninLogs
         CurrentBrowser = tostring(DeviceDetail.browser),
         CurrentHour = hourofday(TimeGenerated);
 // --- Part 6: Produce the comparison output ---
-currentSignin
+CurrentSignin
 | extend
-    IsIPNew = iff(CurrentIP in (knownIPs), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsCountryNew = iff(CurrentCountry in (knownCountries), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsCityNew = iff(CurrentCity in (knownCities), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsAppNew = iff(CurrentApp in (knownApps), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsDeviceNew = iff(CurrentDevice in (knownDevices), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsBrowserNew = iff(CurrentBrowser in (knownBrowsers), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS")
+    IsIPNew = iff(CurrentIP in (KnownIPs), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsCountryNew = iff(CurrentCountry in (KnownCountries), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsCityNew = iff(CurrentCity in (KnownCities), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsAppNew = iff(CurrentApp in (KnownApps), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsDeviceNew = iff(CurrentDevice in (KnownDevices), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsBrowserNew = iff(CurrentBrowser in (KnownBrowsers), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS")
 // Cross-join with baseline stats for statistical comparison
 | extend placeholder = 1
-| join kind=inner (baselineStats | extend placeholder = 1) on placeholder
+| join kind=inner (BaselineStats | extend placeholder = 1) on placeholder
 | project-away placeholder, placeholder1
 | extend
     // Count how many properties are new
@@ -875,14 +875,14 @@ currentSignin
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let baselinePeriod = 30d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let BaselinePeriod = 30d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 SigninLogs
-| where TimeGenerated between (baselineStart .. baselineEnd)
-| where UserPrincipalName == targetUser
+| where TimeGenerated between (BaselineStart .. BaselineEnd)
+| where UserPrincipalName == TargetUser
 | where ResultType == "0"
 | summarize
     SigninCount = count(),
@@ -911,16 +911,16 @@ SigninLogs
 //       do NOT union raw data (volume can be enormous)
 // Expected runtime: 10-30 seconds (high volume table)
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let alertIP = "198.51.100.42";
-let baselinePeriod = 30d;
-let baselineStart = alertTime - baselinePeriod;
-let baselineEnd = alertTime - 1d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let AlertIP = "198.51.100.42";
+let BaselinePeriod = 30d;
+let BaselineStart = AlertTime - BaselinePeriod;
+let BaselineEnd = AlertTime - 1d;
 // Summarize by day to control volume
 AADNonInteractiveUserSignInLogs
-| where TimeGenerated between (baselineStart .. baselineEnd)
-| where UserPrincipalName == targetUser
+| where TimeGenerated between (BaselineStart .. BaselineEnd)
+| where UserPrincipalName == TargetUser
 | where ResultType == "0"
 | summarize
     DailyNonInteractiveSignins = count(),
@@ -938,21 +938,21 @@ AADNonInteractiveUserSignInLogs
     // Check if the alert IP appears in non-interactive history
     AlertIPInNonInteractiveBaseline = toscalar(
         AADNonInteractiveUserSignInLogs
-        | where TimeGenerated between (baselineStart .. baselineEnd)
-        | where UserPrincipalName == targetUser
-        | where IPAddress == alertIP
+        | where TimeGenerated between (BaselineStart .. BaselineEnd)
+        | where UserPrincipalName == TargetUser
+        | where IPAddress == AlertIP
         | count
     ) > 0
 ```
 
 **Performance Notes:**
 - Query 3A scans 30 days of SigninLogs for a single user - moderate volume
-- The `distinct` subqueries (knownIPs, knownCountries, etc.) use materialized temp tables - efficient
+- The `distinct` subqueries (KnownIPs, KnownCountries, etc.) use materialized temp tables - efficient
 - Query 3C scans AADNonInteractiveUserSignInLogs which can be 10-50x the volume of SigninLogs. The daily summarization pattern prevents memory pressure
-- If the user is a service account or automation account with thousands of daily sign-ins, consider reducing baselinePeriod to 14d
+- If the user is a service account or automation account with thousands of daily sign-ins, consider reducing BaselinePeriod to 14d
 
 **Tuning Guidance:**
-- **baselinePeriod**: Default 30d. Use 14d for high-volume accounts or recent onboarding scenarios. Use 60d for infrequent users
+- **BaselinePeriod**: Default 30d. Use 14d for high-volume accounts or recent onboarding scenarios. Use 60d for infrequent users
 - **AnomalyAssessment thresholds**: Adjust the case logic based on organizational tolerance
 - **ResultType filter**: The baseline only uses successful sign-ins (ResultType == "0"). Include failed sign-ins if you want to see brute force patterns
 - **Non-interactive baseline**: Query 3C is optional for E3 environments without P1/P2
@@ -1000,12 +1000,12 @@ AADNonInteractiveUserSignInLogs
 // Table: AADUserRiskEvents
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let correlationWindow = 7d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let CorrelationWindow = 7d;
 AADUserRiskEvents
-| where TimeGenerated between ((alertTime - correlationWindow) .. (alertTime + 1d))
-| where UserPrincipalName == targetUser
+| where TimeGenerated between ((AlertTime - CorrelationWindow) .. (AlertTime + 1d))
+| where UserPrincipalName == TargetUser
 | project
     TimeGenerated,
     UserPrincipalName,
@@ -1058,9 +1058,9 @@ AADUserRiskEvents
 // Note: This is a STATE table - use arg_max for latest state
 // Expected runtime: <3 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
+let TargetUser = "user@contoso.com";
 AADRiskyUsers
-| where UserPrincipalName == targetUser
+| where UserPrincipalName == TargetUser
 | summarize arg_max(TimeGenerated, *) by UserPrincipalName
 | project
     UserPrincipalName,
@@ -1094,13 +1094,13 @@ AADRiskyUsers
 // Table: AADUserRiskEvents
 // Expected runtime: <5 seconds
 // ============================================================
-let alertIP = "198.51.100.42";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let correlationWindow = 7d;
+let AlertIP = "198.51.100.42";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let CorrelationWindow = 7d;
 AADUserRiskEvents
-| where TimeGenerated between ((alertTime - correlationWindow) .. (alertTime + 1d))
+| where TimeGenerated between ((AlertTime - CorrelationWindow) .. (AlertTime + 1d))
 // IpAddress (capital A) in this table
-| where IpAddress == alertIP
+| where IpAddress == AlertIP
 | summarize
     RiskEventCount = count(),
     RiskEventTypes = make_set(RiskEventType),
@@ -1112,8 +1112,8 @@ AADUserRiskEvents
     MultiUserIndicator = iff(
         toscalar(
             AADUserRiskEvents
-            | where TimeGenerated between ((alertTime - correlationWindow) .. (alertTime + 1d))
-            | where IpAddress == alertIP
+            | where TimeGenerated between ((AlertTime - CorrelationWindow) .. (AlertTime + 1d))
+            | where IpAddress == AlertIP
             | distinct UserPrincipalName
             | count
         ) > 1,
@@ -1131,21 +1131,21 @@ AADUserRiskEvents
 // Table: SecurityAlert
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertIP = "198.51.100.42";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let correlationWindow = 7d;
+let TargetUser = "user@contoso.com";
+let AlertIP = "198.51.100.42";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let CorrelationWindow = 7d;
 SecurityAlert
-| where TimeGenerated between ((alertTime - correlationWindow) .. (alertTime + 1d))
+| where TimeGenerated between ((AlertTime - CorrelationWindow) .. (AlertTime + 1d))
 // Extract user entities from the Entities JSON array
 | mv-expand Entity = parse_json(Entities)
 | where
     // Match user entities
     (Entity.Type == "account" and
-        (tostring(Entity.Name) has targetUser or tostring(Entity.UPNSuffix) has targetUser))
+        (tostring(Entity.Name) has TargetUser or tostring(Entity.UPNSuffix) has TargetUser))
     or
     // Match IP entities
-    (Entity.Type == "ip" and tostring(Entity.Address) == alertIP)
+    (Entity.Type == "ip" and tostring(Entity.Address) == AlertIP)
 | project
     TimeGenerated,
     AlertName,
@@ -1169,7 +1169,7 @@ SecurityAlert
 - If SecurityAlert has high volume, the mv-expand on Entities can be expensive. Consider adding a pre-filter on AlertName or ProviderName
 
 **Tuning Guidance:**
-- **correlationWindow**: Default 7d. Reduce to 3d for faster triage, expand to 14d to catch slow-burn attacks
+- **CorrelationWindow**: Default 7d. Reduce to 3d for faster triage, expand to 14d to catch slow-burn attacks
 - **RiskSignificance mapping**: Add organization-specific risk types if custom detections are in use
 - **Query 4C (multi-user)**: The toscalar subquery may time out on very large environments. If so, remove it and manually check the result count
 
@@ -1211,12 +1211,12 @@ SecurityAlert
 // Table: AuditLogs
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
 // Use 4-hour window per Hasan's recommendation (accounts for latency)
-let postSignInWindow = 4h;
+let PostSignInWindow = 4h;
 AuditLogs
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 // Filter for high-risk operations
 | where OperationName in (
     // MFA / authentication persistence
@@ -1245,8 +1245,8 @@ AuditLogs
 )
 | mv-expand TargetResource = TargetResources
 // Check if the target user initiated OR is the target of the operation
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -1262,7 +1262,7 @@ AuditLogs
     TargetUPN,
     TargetDisplayName,
     ModifiedProperties,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     // Severity classification for post-sign-in activity
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
@@ -1292,19 +1292,19 @@ AuditLogs
 //       Re-run this query after 1-2 hours for full coverage.
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
 // 4-hour window per Hasan's latency guidance
-let postSignInWindow = 4h;
+let PostSignInWindow = 4h;
 // IP normalization function - OfficeActivity.ClientIP can include port numbers
 // and IPv6-mapped formats (Hasan's gotcha)
-let cleanIPFromOffice = (rawIP: string) {
+let CleanIPFromOffice = (rawIP: string) {
     extract(@"(\d+\.\d+\.\d+\.\d+)", 1, rawIP)
 };
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 // UserId in OfficeActivity uses UPN format
-| where UserId == targetUser
+| where UserId == TargetUser
 | extend CleanClientIP = extract(@"(\d+\.\d+\.\d+\.\d+)", 1, ClientIP)
 | project
     TimeGenerated,
@@ -1314,7 +1314,7 @@ OfficeActivity
     CleanClientIP,
     // Include raw ClientIP for reference
     RawClientIP = ClientIP,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     // Classify operations by risk
     RiskCategory = case(
         // PERSISTENCE - Inbox rules
@@ -1358,12 +1358,12 @@ OfficeActivity
 // Table: OfficeActivity
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | where Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule")
 // Parse the Parameters column to extract rule details
 | mv-expand Parameter = parse_json(Parameters)
@@ -1417,12 +1417,12 @@ OfficeActivity
 // Table: OfficeActivity
 // Expected runtime: 5-10 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
 OfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | where Operation in (
     "MailItemsAccessed", "FileDownloaded", "FileSyncDownloadedFull",
     "FileAccessed", "FileAccessedExtended", "Send"
@@ -1462,14 +1462,14 @@ OfficeActivity
 // Fallback: If unavailable, Queries 5A-5D cover the core checks
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
 CloudAppEvents
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 // AccountDisplayName is primary identifier (not AccountUPN)
 // Hasan's gotcha: use display name or AccountObjectId for matching
-| where AccountDisplayName has targetUser or AccountId has targetUser
+| where AccountDisplayName has TargetUser or AccountId has TargetUser
 | project
     TimeGenerated,
     ActionType,
@@ -1477,7 +1477,7 @@ CloudAppEvents
     AccountDisplayName,
     IPAddress,
     ActivityObjects,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     RiskCategory = case(
         ActionType has_any ("MailboxForwardingRuleCreated", "InboxRuleCreated"),
             "CRITICAL - RULE CREATION",
@@ -1499,7 +1499,7 @@ CloudAppEvents
 - If investigating within 1 hour of the alert, note that OfficeActivity data may still be ingesting. Re-run after 2 hours for complete coverage
 
 **Tuning Guidance:**
-- **postSignInWindow**: Default 4h (accounts for OfficeActivity latency). For fast triage use 2h but note potential data gaps. For thorough investigation expand to 24h
+- **PostSignInWindow**: Default 4h (accounts for OfficeActivity latency). For fast triage use 2h but note potential data gaps. For thorough investigation expand to 24h
 - **Bulk thresholds**: Query 5D uses >100 email items and >50 file downloads as alert thresholds. Adjust based on the user's typical activity volume from the baseline (Query 3)
 - **CloudAppEvents**: Query 5E is optional for E3 environments. Skip if Defender for Cloud Apps is not licensed
 - **Inbox rule keywords**: Query 5C checks for financial keywords in SubjectContainsWords. Add industry-specific keywords as needed
@@ -1540,13 +1540,13 @@ CloudAppEvents
 //       This is an optional enrichment step.
 // Expected runtime: <3 seconds
 // ============================================================
-let alertIP = "198.51.100.42";
+let AlertIP = "198.51.100.42";
 ThreatIntelligenceIndicator
 | where isnotempty(NetworkIP)
 // Only active indicators (Hasan's gotcha)
 | where Active == true
 | where ExpirationDateTime > now()
-| where NetworkIP == alertIP
+| where NetworkIP == AlertIP
 // Filter for reasonable confidence (Hasan recommends >= 50)
 | where ConfidenceScore >= 50
 | project
@@ -1579,12 +1579,12 @@ ThreatIntelligenceIndicator
 // Table: SigninLogs
 // Expected runtime: 5-10 seconds
 // ============================================================
-let alertIP = "198.51.100.42";
-let targetUser = "user@contoso.com";
-let lookbackPeriod = 30d;
+let AlertIP = "198.51.100.42";
+let TargetUser = "user@contoso.com";
+let LookbackPeriod = 30d;
 SigninLogs
-| where TimeGenerated > ago(lookbackPeriod)
-| where IPAddress == alertIP
+| where TimeGenerated > ago(LookbackPeriod)
+| where IPAddress == AlertIP
 // Only successful sign-ins
 | where ResultType == "0"
 | summarize
@@ -1600,15 +1600,15 @@ SigninLogs
             "LIKELY CORPORATE - Used by 10+ users (shared exit IP)",
         DistinctUsers > 3,
             "POSSIBLY CORPORATE - Used by multiple users",
-        DistinctUsers == 1 and UserList has targetUser,
+        DistinctUsers == 1 and UserList has TargetUser,
             "SINGLE USER - Only used by the target user (may be personal IP)",
-        DistinctUsers == 1 and not(UserList has targetUser),
+        DistinctUsers == 1 and not(UserList has TargetUser),
             "SINGLE OTHER USER - Used by a different user only",
         DistinctUsers == 0,
             "NEVER SEEN - This IP has never been used for successful sign-ins",
         "UNKNOWN"
     ),
-    IsTargetUserIncluded = iff(UserList has targetUser, "Yes", "No")
+    IsTargetUserIncluded = iff(UserList has TargetUser, "Yes", "No")
 ```
 
 #### Query 6C: UEBA Insights for User and IP (Premium)
@@ -1624,12 +1624,12 @@ SigninLogs
 //       Fallback: rely on Queries 6A and 6B for IP assessment.
 // Expected runtime: <5 seconds
 // ============================================================
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let lookbackPeriod = 7d;
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let LookbackPeriod = 7d;
 BehaviorAnalytics
-| where TimeGenerated between ((alertTime - lookbackPeriod) .. (alertTime + 1d))
-| where UserPrincipalName == targetUser
+| where TimeGenerated between ((AlertTime - LookbackPeriod) .. (AlertTime + 1d))
+| where UserPrincipalName == TargetUser
 // InvestigationPriority >= 5 is recommended threshold (Hasan's gotcha)
 | where InvestigationPriority >= 5
 | project
@@ -1654,7 +1654,7 @@ BehaviorAnalytics
 
 **Tuning Guidance:**
 - **TI ConfidenceScore threshold**: Default >= 50. Increase to >= 80 for high-precision, decrease to >= 25 for maximum coverage with more false positives
-- **Organizational IP check (6B) lookbackPeriod**: Default 30d. Expand to 90d to catch IPs used by seasonal workers or infrequent users
+- **Organizational IP check (6B) LookbackPeriod**: Default 30d. Expand to 90d to catch IPs used by seasonal workers or infrequent users
 - **UEBA InvestigationPriority threshold**: Default >= 5. Decrease to >= 3 for broader coverage, increase to >= 7 for high-confidence anomalies only
 - **If no TI feeds**: Skip Query 6A entirely. Perform manual IP enrichment (VirusTotal, AbuseIPDB, Shodan)
 
@@ -1946,7 +1946,7 @@ All queries include datatable-based inline tests with synthetic data. Each test 
 // TEST: Query 1 - Extract Alert Entities and Sign-In Details
 // Synthetic data: 5 malicious + 10 benign risk events / sign-ins
 // ============================================================
-let testRiskEvents = datatable(
+let TestRiskEvents = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     RiskEventType: string,
@@ -2018,7 +2018,7 @@ let testRiskEvents = datatable(
         "198.51.100.42", dynamic({"city":"Moscow","countryOrRegion":"RU"}),
         "corr-015", "risk-015"
 ];
-let testSigninLogs = datatable(
+let TestSigninLogs = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -2142,15 +2142,15 @@ let testSigninLogs = datatable(
         "notApplied", "0", "corr-015", "sess-015"
 ];
 // --- Test execution: should return 1 row for user@contoso.com unfamiliarFeatures ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let alertIP = "198.51.100.42";
-let lookbackWindow = 2h;
-let riskEvent = testRiskEvents
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let AlertIP = "198.51.100.42";
+let LookbackWindow = 2h;
+let RiskEvent = TestRiskEvents
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     | where RiskEventType == "unfamiliarFeatures"
-    | where IpAddress == alertIP
+    | where IpAddress == AlertIP
     | project
         RiskTimeGenerated = TimeGenerated,
         UserPrincipalName,
@@ -2161,9 +2161,9 @@ let riskEvent = testRiskEvents
         RiskLocation = Location,
         CorrelationId,
         Id;
-let signinDetails = testSigninLogs
-    | where TimeGenerated between ((alertTime - lookbackWindow) .. (alertTime + lookbackWindow))
-    | where UserPrincipalName == targetUser
+let SigninDetails = TestSigninLogs
+    | where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + LookbackWindow))
+    | where UserPrincipalName == TargetUser
     | project
         SigninTimeGenerated = TimeGenerated,
         UserPrincipalName,
@@ -2186,8 +2186,8 @@ let signinDetails = testSigninLogs
         ResultDescription = iff(ResultType == "0", "Success", ResultType),
         CorrelationId,
         SessionId;
-riskEvent
-| join kind=inner signinDetails on CorrelationId, UserPrincipalName
+RiskEvent
+| join kind=inner SigninDetails on CorrelationId, UserPrincipalName
 | project
     RiskTimeGenerated,
     DetectionTimingType,
@@ -2227,7 +2227,7 @@ riskEvent
 // TEST: Query 2B - Recent Account Changes
 // Synthetic data: 6 malicious + 12 benign = 18 rows
 // ============================================================
-let testAuditLogs = datatable(
+let TestAuditLogs = datatable(
     TimeGenerated: datetime,
     OperationName: string,
     Category: string,
@@ -2333,11 +2333,11 @@ let testAuditLogs = datatable(
         "audit-b12"
 ];
 // --- Test execution ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let changeWindow = 72h;
-testAuditLogs
-| where TimeGenerated between ((alertTime - changeWindow) .. (alertTime + changeWindow))
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let ChangeWindow = 72h;
+TestAuditLogs
+| where TimeGenerated between ((AlertTime - ChangeWindow) .. (AlertTime + ChangeWindow))
 | where OperationName in (
     "Reset password (by admin)", "Reset user password", "Change password (self-service)",
     "Change user password", "Register security info", "User registered security info",
@@ -2348,8 +2348,8 @@ testAuditLogs
     "Add user", "Delete user"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -2365,15 +2365,15 @@ testAuditLogs
     TargetUPN,
     TargetDisplayName,
     ModifiedProperties,
-    TimingRelativeToAlert = iff(TimeGenerated > alertTime, "AFTER ALERT", "BEFORE ALERT"),
+    TimingRelativeToAlert = iff(TimeGenerated > AlertTime, "AFTER ALERT", "BEFORE ALERT"),
     SuspiciousIndicator = case(
-        OperationName has "security info" and TimeGenerated > alertTime,
+        OperationName has "security info" and TimeGenerated > AlertTime,
             "CRITICAL - MFA change after alert",
-        OperationName has "password" and TimeGenerated > alertTime,
+        OperationName has "password" and TimeGenerated > AlertTime,
             "CRITICAL - Password change after alert",
         OperationName has "Consent to application",
             "HIGH - App consent granted",
-        OperationName has "Register device" and TimeGenerated > alertTime,
+        OperationName has "Register device" and TimeGenerated > AlertTime,
             "HIGH - New device registered after alert",
         ""
     ),
@@ -2394,7 +2394,7 @@ testAuditLogs
 // - Add delegated permission grant (AFTER, no specific indicator - app consent logic)
 // - User deleted security info (AFTER, "CRITICAL - MFA change after alert")
 // - Reset password by admin (AFTER, "CRITICAL - Password change after alert")
-// Rows filtered out: 5 other-user rows (b03, b04, b06, b08, b10, b11) don't match targetUser
+// Rows filtered out: 5 other-user rows (b03, b04, b06, b08, b10, b11) don't match TargetUser
 ```
 
 ### Test 3: Query 3A - Baseline Comparison
@@ -2404,7 +2404,7 @@ testAuditLogs
 // TEST: Query 3A - Baseline Comparison
 // Synthetic data: 12 benign baseline + 1 excluded failed + 5 anomalous = 18 rows
 // ============================================================
-let baselineSignins = datatable(
+let BaselineSignins = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -2480,7 +2480,7 @@ let baselineSignins = datatable(
         "Microsoft Office 365", "50126"
 ];
 // Anomalous sign-ins to compare against baseline (5 malicious variants)
-let currentSignin = datatable(
+let CurrentSignin = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     IPAddress: string,
@@ -2516,14 +2516,14 @@ let currentSignin = datatable(
         "Azure Portal", "0"
 ];
 // --- Build known value sets from baseline ---
-let knownIPs = baselineSignins | where ResultType == "0" | distinct IPAddress;
-let knownCountries = baselineSignins | where ResultType == "0" | distinct tostring(Location.countryOrRegion);
-let knownCities = baselineSignins | where ResultType == "0" | distinct tostring(Location.city);
-let knownApps = baselineSignins | where ResultType == "0" | distinct AppDisplayName;
-let knownDevices = baselineSignins | where ResultType == "0" | distinct tostring(DeviceDetail.operatingSystem);
-let knownBrowsers = baselineSignins | where ResultType == "0" | distinct tostring(DeviceDetail.browser);
+let KnownIPs = BaselineSignins | where ResultType == "0" | distinct IPAddress;
+let KnownCountries = BaselineSignins | where ResultType == "0" | distinct tostring(Location.countryOrRegion);
+let KnownCities = BaselineSignins | where ResultType == "0" | distinct tostring(Location.city);
+let KnownApps = BaselineSignins | where ResultType == "0" | distinct AppDisplayName;
+let KnownDevices = BaselineSignins | where ResultType == "0" | distinct tostring(DeviceDetail.operatingSystem);
+let KnownBrowsers = BaselineSignins | where ResultType == "0" | distinct tostring(DeviceDetail.browser);
 // --- Compare current sign-in ---
-currentSignin
+CurrentSignin
 | extend
     CurrentIP = IPAddress,
     CurrentCountry = tostring(Location.countryOrRegion),
@@ -2533,12 +2533,12 @@ currentSignin
     CurrentBrowser = tostring(DeviceDetail.browser),
     CurrentHour = hourofday(TimeGenerated)
 | extend
-    IsIPNew = iff(CurrentIP in (knownIPs), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsCountryNew = iff(CurrentCountry in (knownCountries), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsCityNew = iff(CurrentCity in (knownCities), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsAppNew = iff(CurrentApp in (knownApps), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsDeviceNew = iff(CurrentDevice in (knownDevices), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
-    IsBrowserNew = iff(CurrentBrowser in (knownBrowsers), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS")
+    IsIPNew = iff(CurrentIP in (KnownIPs), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsCountryNew = iff(CurrentCountry in (KnownCountries), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsCityNew = iff(CurrentCity in (KnownCities), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsAppNew = iff(CurrentApp in (KnownApps), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsDeviceNew = iff(CurrentDevice in (KnownDevices), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS"),
+    IsBrowserNew = iff(CurrentBrowser in (KnownBrowsers), "KNOWN", "NEW - NEVER SEEN IN 30 DAYS")
 | extend
     NewPropertyCount = toint(IsIPNew == "NEW - NEVER SEEN IN 30 DAYS")
         + toint(IsCountryNew == "NEW - NEVER SEEN IN 30 DAYS")
@@ -2581,7 +2581,7 @@ currentSignin
 // TEST: Query 4A - Correlated Risk Events
 // Synthetic data: 7 malicious + 11 benign = 18 rows
 // ============================================================
-let testRiskEvents = datatable(
+let TestRiskEvents = datatable(
     TimeGenerated: datetime,
     UserPrincipalName: string,
     RiskEventType: string,
@@ -2650,12 +2650,12 @@ let testRiskEvents = datatable(
         "85.100.50.25", dynamic({"city":"Istanbul","countryOrRegion":"TR"}), "corr-110", "risk-b11"
 ];
 // --- Test: All risk events for target user ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let correlationWindow = 7d;
-testRiskEvents
-| where TimeGenerated between ((alertTime - correlationWindow) .. (alertTime + 1d))
-| where UserPrincipalName == targetUser
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let CorrelationWindow = 7d;
+TestRiskEvents
+| where TimeGenerated between ((AlertTime - CorrelationWindow) .. (AlertTime + 1d))
+| where UserPrincipalName == TargetUser
 | project
     TimeGenerated,
     UserPrincipalName,
@@ -2700,7 +2700,7 @@ testRiskEvents
 // TEST: Query 5A - Directory Changes After Sign-In (Persistence)
 // Synthetic data: 6 malicious + 12 benign = 18 rows
 // ============================================================
-let testAuditLogs = datatable(
+let TestAuditLogs = datatable(
     TimeGenerated: datetime,
     OperationName: string,
     Category: string,
@@ -2821,11 +2821,11 @@ let testAuditLogs = datatable(
         "audit-5a-b12"
 ];
 // --- Test execution ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
-testAuditLogs
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
+TestAuditLogs
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
 | where OperationName in (
     "User registered security info",
     "User deleted security info",
@@ -2847,8 +2847,8 @@ testAuditLogs
     "Add eligible member to role"
 )
 | mv-expand TargetResource = TargetResources
-| where tostring(InitiatedBy.user.userPrincipalName) == targetUser
-    or tostring(TargetResource.userPrincipalName) == targetUser
+| where tostring(InitiatedBy.user.userPrincipalName) == TargetUser
+    or tostring(TargetResource.userPrincipalName) == TargetUser
 | extend
     InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
     InitiatedByApp = tostring(InitiatedBy.app.displayName),
@@ -2864,7 +2864,7 @@ testAuditLogs
     TargetUPN,
     TargetDisplayName,
     ModifiedProperties,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     Severity = case(
         OperationName has "security info", "CRITICAL - MFA MANIPULATION",
         OperationName has "Consent to application", "CRITICAL - OAUTH APP CONSENT",
@@ -2886,8 +2886,8 @@ testAuditLogs
 // - M5: Add member to role (+40min) → "CRITICAL - ROLE ESCALATION"
 // - M6: User deleted security info (+50min) → "CRITICAL - MFA MANIPULATION"
 // Filtered out:
-//   B1,B3,B4,B8,B9,B12: different users (not initiator or target of targetUser)
-//   B2: targets other@contoso.com, initiated by admin (no match to targetUser)
+//   B1,B3,B4,B8,B9,B12: different users (not initiator or target of TargetUser)
+//   B2: targets other@contoso.com, initiated by admin (no match to TargetUser)
 //   B5,B6: before alert window OR different user
 //   B7: initiated by app (no user match), targets HR Sync App
 //   B10: before alert window (09:00 < 14:30)
@@ -2903,7 +2903,7 @@ testAuditLogs
 // TEST: Query 5B/5C/5D - Post-Sign-In Activity
 // Synthetic data: 8 malicious + 12 benign = 20 rows
 // ============================================================
-let testOfficeActivity = datatable(
+let TestOfficeActivity = datatable(
     TimeGenerated: datetime,
     Operation: string,
     OfficeWorkload: string,
@@ -2988,12 +2988,12 @@ let testOfficeActivity = datatable(
         "10.1.1.3", dynamic([])
 ];
 // --- Test 5B: All post-sign-in activity ---
-let targetUser = "user@contoso.com";
-let alertTime = datetime(2026-02-21T14:30:00Z);
-let postSignInWindow = 4h;
-testOfficeActivity
-| where TimeGenerated between (alertTime .. (alertTime + postSignInWindow))
-| where UserId == targetUser
+let TargetUser = "user@contoso.com";
+let AlertTime = datetime(2026-02-21T14:30:00Z);
+let PostSignInWindow = 4h;
+TestOfficeActivity
+| where TimeGenerated between (AlertTime .. (AlertTime + PostSignInWindow))
+| where UserId == TargetUser
 | extend CleanClientIP = extract(@"(\d+\.\d+\.\d+\.\d+)", 1, ClientIP)
 | project
     TimeGenerated,
@@ -3002,7 +3002,7 @@ testOfficeActivity
     UserId,
     CleanClientIP,
     RawClientIP = ClientIP,
-    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, alertTime),
+    MinutesAfterAlert = datetime_diff("minute", TimeGenerated, AlertTime),
     RiskCategory = case(
         Operation in ("New-InboxRule", "Set-InboxRule", "Enable-InboxRule"),
             "CRITICAL - INBOX RULE",
@@ -3035,7 +3035,7 @@ testOfficeActivity
 // TEST: Query 6A/6B - IP Reputation and Context
 // Synthetic data: 5 malicious TI hits + 13 benign/filtered = 18 rows
 // ============================================================
-let testTI = datatable(
+let TestTI = datatable(
     TimeGenerated: datetime,
     NetworkIP: string,
     ThreatType: string,
@@ -3128,12 +3128,12 @@ let testTI = datatable(
         datetime(2026-06-01T00:00:00Z), true
 ];
 // --- Test TI lookup ---
-let alertIP = "198.51.100.42";
-testTI
+let AlertIP = "198.51.100.42";
+TestTI
 | where isnotempty(NetworkIP)
 | where Active == true
 | where ExpirationDateTime > now()
-| where NetworkIP == alertIP
+| where NetworkIP == AlertIP
 | where ConfidenceScore >= 50
 | project
     NetworkIP,
@@ -3162,7 +3162,7 @@ testTI
 //   B7: alert IP but expired
 //   B3: different IP, expired
 //   B4: different IP, inactive (Active=false)
-//   B5,B6,B9,B10,B12,B13: different IPs (don't match alertIP)
+//   B5,B6,B9,B10,B12,B13: different IPs (don't match AlertIP)
 //   B8: empty NetworkIP
 // Multiple TI sources confirming same IP = HIGH CONFIDENCE malicious infrastructure
 ```
