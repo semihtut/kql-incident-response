@@ -1871,104 +1871,82 @@ html {
    Implemented by Emre (Web Architect)
    ===================================================== */
 
-/*
- * Material theme sidebar structure (navigation.tabs + navigation.sections + navigation.indexes):
- *
- *   nav[data-md-level="1"]  (active tab content, e.g. "Runbooks")
- *     ul.md-nav__list
- *       li.md-nav__item                              (standalone: "Gallery", "Endpoint")
- *       li.md-nav__item--section.md-nav__item--nested (section: "Identity", "Email")
- *         div.md-nav__container > a.md-nav__link      (section header link)
- *         nav[data-md-level="2"]
- *           ul.md-nav__list
- *             li.md-nav__item > a.md-nav__link        (runbook links)
- */
-
-/* --- 27a. Section Header Styling --- */
+/* --- 27a. Section Header Styling (categories with runbooks) --- */
 
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__link,
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--kql-accent);
+  color: var(--kql-text-muted);
   transition: color 0.2s ease;
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__link,
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--md-primary-fg-color);
+  color: var(--md-default-fg-color--light);
 }
 
 /* Section header hover */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link:hover {
-  color: #9ec5fe;
+  color: var(--kql-accent);
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link:hover {
-  color: var(--kql-accent-alt);
+  color: var(--md-primary-fg-color);
 }
 
-/* --- 27b. Category Icons (::before pseudo-elements) --- */
+/* --- 27b. Section Header Left Accent Bar --- */
 
-/*
- * Per-category icons using nth-of-type on .md-nav__item--section items.
- *
- * Current sidebar section order (only categories WITH child runbooks):
- *   1st --section = Identity
- *   2nd --section = Email
- *   3rd --section = Azure Infrastructure
- *
- * Categories without runbooks (Endpoint, Cloud Apps, Okta) render as plain
- * .md-nav__item, NOT --section. When runbooks are added to those categories,
- * nth-of-type numbering will shift — update these selectors accordingly.
- */
-
-/* Identity = shield */
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:nth-of-type(1) > .md-nav__container > a.md-nav__link .md-ellipsis::before {
-  content: "\1F6E1\FE0F"; /* 🛡️ */
+/* Small colored bar before each section header for visual anchor */
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link .md-ellipsis::before,
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__link:not(.md-nav__container) .md-ellipsis::before {
+  content: "";
   display: inline-block;
-  font-size: 0.7rem;
-  margin-right: 0.35rem;
+  width: 3px;
+  height: 0.6em;
+  margin-right: 0.5rem;
   vertical-align: middle;
-  opacity: 0.8;
+  border-radius: 2px;
+  background: var(--kql-accent);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
 }
 
-/* Email = envelope */
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:nth-of-type(2) > .md-nav__container > a.md-nav__link .md-ellipsis::before {
-  content: "\2709"; /* ✉ */
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link .md-ellipsis::before,
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__link:not(.md-nav__container) .md-ellipsis::before {
+  content: "";
   display: inline-block;
-  font-size: 0.7rem;
-  margin-right: 0.35rem;
+  width: 3px;
+  height: 0.6em;
+  margin-right: 0.5rem;
   vertical-align: middle;
-  opacity: 0.8;
+  border-radius: 2px;
+  background: var(--md-primary-fg-color);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
 }
 
-/* Azure Infrastructure = cloud */
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:nth-of-type(3) > .md-nav__container > a.md-nav__link .md-ellipsis::before {
-  content: "\2601"; /* ☁ */
-  display: inline-block;
-  font-size: 0.7rem;
-  margin-right: 0.35rem;
-  vertical-align: middle;
-  opacity: 0.8;
+/* Bar brightens on hover */
+.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section > .md-nav__container > a.md-nav__link:hover .md-ellipsis::before {
+  opacity: 1;
 }
 
 /* --- 27c. Spacing Between Category Groups --- */
 
 .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section {
-  margin-top: 1rem;
-  margin-bottom: 0.25rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.15rem;
   padding-top: 0.75rem;
 }
 
 .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:first-of-type {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   padding-top: 0;
 }
 
@@ -1976,62 +1954,62 @@ html {
 
 /* Section → Section */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item--section {
-  border-top: 1px solid rgba(122, 162, 247, 0.08);
+  border-top: 1px solid rgba(122, 162, 247, 0.06);
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item--section {
-  border-top: 1px solid rgba(74, 20, 140, 0.08);
+  border-top: 1px solid rgba(74, 20, 140, 0.06);
 }
 
-/* Standalone item → Section (e.g. Gallery → Identity) */
+/* Standalone item → Section */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) + .md-nav__item--section {
-  border-top: 1px solid rgba(122, 162, 247, 0.08);
+  border-top: 1px solid rgba(122, 162, 247, 0.06);
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item:not(.md-nav__item--section) + .md-nav__item--section {
-  border-top: 1px solid rgba(74, 20, 140, 0.08);
+  border-top: 1px solid rgba(74, 20, 140, 0.06);
 }
 
-/* Section → Standalone item (e.g. Identity → Endpoint) */
+/* Section → Standalone item */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) {
   border-top: 1px solid rgba(122, 162, 247, 0.06);
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) {
   border-top: 1px solid rgba(74, 20, 140, 0.06);
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
 }
 
-/* --- 27e. Child Runbook Links — Indentation & Tree Structure --- */
+/* --- 27e. Child Runbook Links — Indentation & Tree Line --- */
 
 /* Tree connector: left border on child list */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="2"] > .md-nav__list {
-  border-left: 1px solid rgba(122, 162, 247, 0.1);
-  margin-left: 0.5rem;
+  border-left: 1px solid rgba(122, 162, 247, 0.08);
+  margin-left: 0.6rem;
   padding-left: 0;
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="2"] > .md-nav__list {
-  border-left: 1px solid rgba(74, 20, 140, 0.1);
-  margin-left: 0.5rem;
+  border-left: 1px solid rgba(74, 20, 140, 0.08);
+  margin-left: 0.6rem;
   padding-left: 0;
 }
 
 /* Indent and style child links */
 .md-nav[data-md-level="2"] > .md-nav__list > .md-nav__item > .md-nav__link {
-  padding-left: 1.2rem;
+  padding-left: 1rem;
   font-size: 0.76rem;
   font-weight: 400;
   border-radius: 4px;
-  margin-left: 0.2rem;
-  margin-right: 0.2rem;
-  transition: color 0.2s ease, background-color 0.25s ease;
+  margin-left: 0.15rem;
+  margin-right: 0.15rem;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-/* Child link text color — slightly muted */
+/* Child link text color */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="2"] > .md-nav__list > .md-nav__item > .md-nav__link {
   color: var(--kql-text-muted);
 }
@@ -2067,90 +2045,80 @@ html {
   box-shadow: inset 3px 0 0 var(--md-primary-fg-color);
 }
 
-/* --- 27g. Status Icons (md-status--reviewed) --- */
+/* --- 27g. Status Icons (md-status) --- */
 
 .md-nav[data-md-level="2"] .md-status {
-  opacity: 0.35;
+  opacity: 0.3;
   transition: opacity 0.2s ease;
 }
 
 .md-nav[data-md-level="2"] .md-nav__link:hover .md-status {
-  opacity: 0.65;
+  opacity: 0.6;
 }
 
 /* --- 27h. Standalone Category Items (Endpoint, Cloud Apps, Okta) --- */
 /*
  * These categories have no child runbooks yet, so Material renders them
- * as plain .md-nav__item instead of .md-nav__item--section. They are still
- * top-level categories and must look identical to section headers.
- *
- * We exclude "Gallery" (which is also a plain item) by targeting only items
- * that follow a --section item using the adjacent sibling combinator (+).
+ * as plain .md-nav__item instead of .md-nav__item--section.
+ * Styled identically to section headers using adjacent sibling combinator
+ * to exclude Gallery (which sits before any section).
  */
 
-/* Base styling — same as section headers */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--kql-accent);
+  color: var(--kql-text-muted);
   transition: color 0.2s ease;
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--md-primary-fg-color);
+  color: var(--md-default-fg-color--light);
 }
 
-/* Hover */
+/* Standalone header hover */
 [data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
-  color: #9ec5fe;
+  color: var(--kql-accent);
 }
 
 [data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover {
-  color: var(--kql-accent-alt);
+  color: var(--md-primary-fg-color);
 }
 
-/*
- * Per-category icons for standalone items.
- * These use adjacent sibling of specific nth-of-type sections:
- *   Identity (1st section)  + next plain item = Endpoint
- *   Email    (2nd section)  + next plain item = Cloud Apps
- *   Azure    (3rd section)  + next plain item = Okta
- */
-
-/* Endpoint = laptop/monitor */
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:nth-of-type(1) + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
-  content: "\1F5A5"; /* 🖥 */
+/* Accent bar for standalone categories (same as section headers) */
+[data-md-color-scheme="slate"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
+  content: "";
   display: inline-block;
-  font-size: 0.7rem;
-  margin-right: 0.35rem;
+  width: 3px;
+  height: 0.6em;
+  margin-right: 0.5rem;
   vertical-align: middle;
-  opacity: 0.8;
+  border-radius: 2px;
+  background: var(--kql-accent);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
 }
 
-/* Cloud Apps = globe */
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:nth-of-type(2) + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
-  content: "\1F310"; /* 🌐 */
+[data-md-color-scheme="default"] .md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
+  content: "";
   display: inline-block;
-  font-size: 0.7rem;
-  margin-right: 0.35rem;
+  width: 3px;
+  height: 0.6em;
+  margin-right: 0.5rem;
   vertical-align: middle;
-  opacity: 0.8;
+  border-radius: 2px;
+  background: var(--md-primary-fg-color);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
 }
 
-/* Okta = key */
-.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section:nth-of-type(3) + .md-nav__item:not(.md-nav__item--section) > .md-nav__link .md-ellipsis::before {
-  content: "\1F511"; /* 🔑 */
-  display: inline-block;
-  font-size: 0.7rem;
-  margin-right: 0.35rem;
-  vertical-align: middle;
-  opacity: 0.8;
+.md-nav[data-md-level="1"] > .md-nav__list > .md-nav__item--section + .md-nav__item:not(.md-nav__item--section) > .md-nav__link:hover .md-ellipsis::before {
+  opacity: 1;
 }
 
 /* --- 27i. Responsive --- */
@@ -2162,6 +2130,6 @@ html {
   }
 
   .md-nav[data-md-level="2"] > .md-nav__list {
-    margin-left: 0.35rem;
+    margin-left: 0.4rem;
   }
 }
