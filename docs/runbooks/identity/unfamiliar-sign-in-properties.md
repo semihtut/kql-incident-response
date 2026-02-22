@@ -135,60 +135,6 @@ data_checks:
 
 # Unfamiliar Sign-In Properties - Investigation Runbook
 
-<div class="runbook-meta" markdown>
-<div class="runbook-meta-item">
-  <span class="runbook-meta-label">ID</span>
-  <code>RB-0001</code>
-</div>
-<div class="runbook-meta-item">
-  <span class="runbook-meta-label">Severity</span>
-  <span class="severity-badge severity-medium">Medium</span>
-</div>
-<div class="runbook-meta-item">
-  <span class="runbook-meta-label">Source</span>
-  Entra ID Identity Protection
-</div>
-<div class="runbook-meta-item">
-  <span class="runbook-meta-label">Tactics</span>
-  <span class="mitre-tag mitre-initial-access">Initial Access</span>
-  <span class="mitre-tag mitre-persistence">Persistence</span>
-  <span class="mitre-tag mitre-priv-esc">Priv Esc</span>
-  <span class="mitre-tag mitre-defense-evasion">Defense Evasion</span>
-  <span class="mitre-tag mitre-cred-access">Cred Access</span>
-  <span class="mitre-tag mitre-lateral-movement">Lateral Movement</span>
-  <span class="mitre-tag mitre-collection">Collection</span>
-</div>
-</div>
-
-??? abstract "Investigation Flow Diagram"
-
-    ```mermaid
-    flowchart TD
-        A["Alert: Unfamiliar Sign-In Properties"] --> B["Step 1: Extract Alert Entities\n& Sign-In Details"]
-        B --> C["Step 2: Check User Context\n& Account Status"]
-        C --> D["Step 3: Baseline Comparison\nEstablish Normal Behavior"]
-        D --> E{"Activity\nAnomalous?"}
-        E -->|"No - Matches baseline"| F["Document as\nFalse Positive"]
-        E -->|"Yes - Deviates from normal"| G["Step 4: Check Correlated\nRisk Events"]
-        G --> H["Step 5: Post-Sign-In Activity\nBlast Radius Assessment"]
-        H --> I{"Inbox Rules?\nMFA Changes?\nOAuth Grants?"}
-        I -->|"Persistence found"| J["Step 6: IP Reputation\n& Source Context"]
-        I -->|"No persistence"| J
-        J --> K["Step 7: Final\nDetermination"]
-        K --> L{"Confirmed\nCompromise?"}
-        L -->|"Yes"| M["Containment\nPlaybook"]
-        L -->|"No - Suspicious"| N["Continue Monitoring\n+ Watchlist"]
-        L -->|"Benign"| F
-        M --> O["Evidence\nCollection"]
-        O --> P["Escalation\nif needed"]
-
-        style A fill:#e0a527,color:#0d1117,stroke:#b8860b
-        style M fill:#ff4757,color:#e6edf3,stroke:#dc2626
-        style O fill:#4fc3f7,color:#0d1117,stroke:#38bdf8
-        style F fill:#69db7c,color:#0d1117,stroke:#4ade80
-        style N fill:#ff8c42,color:#0d1117,stroke:#fb923c
-    ```
-
 > **RB-0001** | Severity: Medium | Version: 1.0 | Last updated: 2026-02-21
 >
 > **Alert Source:** Microsoft Entra ID Identity Protection
