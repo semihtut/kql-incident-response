@@ -108,6 +108,18 @@ tactic_slugs:
   - cred-access
   - lateral-movement
   - collection
+data_checks:
+  - query: "SigninLogs | take 1"
+    label: primary
+    description: "MFA denial pattern analysis"
+  - query: "AADUserRiskEvents | take 1"
+    description: "For <code>mfaFraud</code> risk events (may be empty if fraud reporting not configured)"
+  - query: "AADNonInteractiveUserSignInLogs | take 1"
+    description: "For post-approval token tracking"
+  - query: "OfficeActivity | take 1"
+    description: "For blast radius assessment"
+  - query: "AuditLogs | take 1"
+    description: "For persistence detection"
 ---
 
 # MFA Fatigue Attack - Investigation Runbook
@@ -195,12 +207,8 @@ An attacker has the user's password (obtained via phishing, credential stuffing,
 - **Number Matching:** Enabled in Authenticator (significantly reduces MFA fatigue success)
 
 ### Data Availability Check
-Before starting the investigation, verify these tables contain data:
-1. Run `SigninLogs | take 1` — **PRIMARY table** for MFA denial pattern analysis
-2. Run `AADUserRiskEvents | take 1` — For `mfaFraud` risk events (may be empty if fraud reporting not configured)
-3. Run `AADNonInteractiveUserSignInLogs | take 1` — For post-approval token tracking
-4. Run `OfficeActivity | take 1` — For blast radius assessment
-5. Run `AuditLogs | take 1` — For persistence detection
+
+{{ data_check_timeline(page.meta.data_checks) }}
 
 ### Licensing Coverage by Investigation Step
 

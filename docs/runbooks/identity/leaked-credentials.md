@@ -101,6 +101,18 @@ created: 2026-02-22
 updated: 2026-02-22
 version: "1.0"
 tier: 1
+data_checks:
+  - query: "AADUserRiskEvents | take 1"
+    label: primary
+    description: "If empty, Entra ID P2 or the connector is missing"
+  - query: "AADRiskyUsers | take 1"
+    description: "Required for user risk state assessment"
+  - query: "SigninLogs | take 1"
+    description: "Must be present for sign-in baseline and anomaly detection"
+  - query: "AuditLogs | where OperationName has &quot;password&quot; | take 1"
+    description: "Verify password change events are captured"
+  - query: "OfficeActivity | take 1"
+    description: "If empty, the Office 365 connector is not configured"
 ---
 
 # Leaked Credentials - Investigation Runbook
@@ -171,12 +183,8 @@ RB-0001 and RB-0002 detect anomalous sign-in events and provide a specific sign-
 - **Additional Connectors:** Threat Intelligence (TAXII/Platform)
 
 ### Data Availability Check
-Before starting the investigation, verify these tables contain data:
-1. Run `AADUserRiskEvents | take 1` - If empty, Entra ID P2 or the connector is missing
-2. Run `AADRiskyUsers | take 1` - Required for user risk state assessment
-3. Run `SigninLogs | take 1` - Must be present for sign-in baseline and anomaly detection
-4. Run `AuditLogs | where OperationName has "password" | take 1` - Verify password change events are captured
-5. Run `OfficeActivity | take 1` - If empty, the Office 365 connector is not configured
+
+{{ data_check_timeline(page.meta.data_checks) }}
 
 ### Licensing Coverage by Investigation Step
 

@@ -108,6 +108,16 @@ created: 2026-02-21
 updated: 2026-02-21
 version: "1.0"
 tier: 1
+data_checks:
+  - query: "AADUserRiskEvents | take 1"
+    label: primary
+    description: "If empty, Entra ID P2 or the connector is missing"
+  - query: "SigninLogs | take 1"
+    description: "Must contain geoCoordinates in Location column for distance calculation"
+  - query: "AADNonInteractiveUserSignInLogs | take 1"
+    description: "Required for token replay detection (Step 5)"
+  - query: "OfficeActivity | take 1"
+    description: "If empty, the Office 365 connector is not configured"
 ---
 
 # Impossible Travel Activity - Investigation Runbook
@@ -178,11 +188,8 @@ RB-0001 detects a single sign-in with unusual properties. This runbook (RB-0002)
 - **Additional Connectors:** Defender for Cloud Apps, Threat Intelligence (TAXII/Platform)
 
 ### Data Availability Check
-Before starting the investigation, verify these tables contain data:
-1. Run `AADUserRiskEvents | take 1` - If empty, Entra ID P2 or the connector is missing
-2. Run `SigninLogs | take 1` - Must contain geoCoordinates in Location column for distance calculation
-3. Run `AADNonInteractiveUserSignInLogs | take 1` - Required for token replay detection (Step 5)
-4. Run `OfficeActivity | take 1` - If empty, the Office 365 connector is not configured
+
+{{ data_check_timeline(page.meta.data_checks) }}
 
 ### Licensing Coverage by Investigation Step
 

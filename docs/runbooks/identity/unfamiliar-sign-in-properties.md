@@ -123,6 +123,14 @@ created: 2026-02-21
 updated: 2026-02-21
 version: "1.0"
 tier: 1
+data_checks:
+  - query: "AADUserRiskEvents | take 1"
+    label: primary
+    description: "If empty, Entra ID P2 or the connector is missing"
+  - query: "OfficeActivity | take 1"
+    description: "If empty, the Office 365 connector is not configured"
+  - query: "IdentityInfo | take 1"
+    description: "If empty, UEBA is not enabled (use Query 2A-Fallback for user context)"
 ---
 
 # Unfamiliar Sign-In Properties - Investigation Runbook
@@ -243,10 +251,8 @@ An attacker has valid credentials and is actively accessing the user's account. 
 - **Additional Connectors:** Defender for Cloud Apps, Threat Intelligence (TAXII/Platform)
 
 ### Data Availability Check
-Before starting the investigation, verify these tables contain data:
-1. Run `AADUserRiskEvents | take 1` - If empty, Entra ID P2 or the connector is missing
-2. Run `OfficeActivity | take 1` - If empty, the Office 365 connector is not configured
-3. Run `IdentityInfo | take 1` - If empty, UEBA is not enabled (use Query 2A-Fallback for user context)
+
+{{ data_check_timeline(page.meta.data_checks) }}
 
 ### Licensing Coverage by Investigation Step
 

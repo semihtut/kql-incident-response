@@ -105,6 +105,19 @@ created: 2026-02-22
 updated: 2026-02-22
 version: "1.0"
 tier: 1
+data_checks:
+  - query: "AADUserRiskEvents | take 1"
+    label: primary
+    description: "If empty, Entra ID P2 or the connector is missing"
+  - query: "SigninLogs | take 1"
+    description: "Must be present for sign-in analysis"
+  - query: "AADNonInteractiveUserSignInLogs | take 1"
+    description: "Required for token usage check"
+  - query: "OfficeActivity | take 1"
+    description: "If empty, the Office 365 connector is not configured"
+  - query: "ThreatIntelligenceIndicator | take 1"
+    label: optional
+    description: "Enhances IP classification"
 ---
 
 # Anonymous IP Address Sign-In - Investigation Runbook
@@ -179,12 +192,8 @@ An attacker has obtained the user's credentials (via phishing, credential stuffi
 - **Additional Connectors:** Threat Intelligence (TAXII/Platform)
 
 ### Data Availability Check
-Before starting the investigation, verify these tables contain data:
-1. Run `AADUserRiskEvents | take 1` - If empty, Entra ID P2 or the connector is missing
-2. Run `SigninLogs | take 1` - Must be present for sign-in analysis
-3. Run `AADNonInteractiveUserSignInLogs | take 1` - Required for token usage check
-4. Run `OfficeActivity | take 1` - If empty, the Office 365 connector is not configured
-5. Run `ThreatIntelligenceIndicator | take 1` - Optional but enhances IP classification
+
+{{ data_check_timeline(page.meta.data_checks) }}
 
 ### Licensing Coverage by Investigation Step
 

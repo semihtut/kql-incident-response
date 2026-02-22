@@ -94,6 +94,18 @@ created: 2026-02-22
 updated: 2026-02-22
 version: "1.0"
 tier: 1
+data_checks:
+  - query: "SigninLogs | take 1"
+    label: primary
+    description: "Authentication failure pattern analysis"
+  - query: "AADUserRiskEvents | take 1"
+    description: "For <code>passwordSpray</code> risk events"
+  - query: "AADNonInteractiveUserSignInLogs | take 1"
+    description: "For legacy auth and service account failures"
+  - query: "OfficeActivity | take 1"
+    description: "For blast radius assessment"
+  - query: "AuditLogs | take 1"
+    description: "For persistence detection"
 ---
 
 # Password Spray Detection - Investigation Runbook
@@ -180,12 +192,8 @@ An attacker sprays thousands of accounts in your tenant with common passwords ("
 - **Legacy Auth Blocked:** Conditional Access policy blocking legacy authentication protocols
 
 ### Data Availability Check
-Before starting the investigation, verify these tables contain data:
-1. Run `SigninLogs | take 1` — **PRIMARY table** for authentication failure pattern analysis
-2. Run `AADUserRiskEvents | take 1` — For `passwordSpray` risk events
-3. Run `AADNonInteractiveUserSignInLogs | take 1` — For legacy auth and service account failures
-4. Run `OfficeActivity | take 1` — For blast radius assessment
-5. Run `AuditLogs | take 1` — For persistence detection
+
+{{ data_check_timeline(page.meta.data_checks) }}
 
 ### Licensing Coverage by Investigation Step
 

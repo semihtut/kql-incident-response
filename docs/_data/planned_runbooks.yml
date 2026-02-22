@@ -35,3 +35,31 @@
     - "Credential Access"
     - "Collection"
     - "Exfiltration"
+
+- id: RB-0008
+  title: "Suspicious Inbox Forwarding Rule"
+  severity: high
+  tier: 2
+  category: email
+  description: >
+    Detects suspicious inbox forwarding or redirect rules in Exchange Online
+    that may indicate BEC or data exfiltration via email collection.
+  tactics:
+    - "Collection"
+    - "Exfiltration"
+    - "Persistence"
+    - "Defense Evasion"
+
+- id: RB-0009
+  title: "Atypical Travel"
+  severity: medium
+  tier: 1
+  category: identity
+  description: >
+    Detects sign-ins from locations that deviate from the user's ML-learned
+    geographic behavior pattern, including first-time countries and
+    Cloud Apps impossible travel correlation.
+  tactics:
+    - "Initial Access"
+    - "Defense Evasion"
+    - "Credential Access"

@@ -20,10 +20,10 @@ Investigation runbooks for identity-based alerts from Microsoft Entra ID, Identi
 | ~~MFA fatigue attack~~ | ~~Identity Protection~~ | ~~Tier 1~~ (completed: RB-0005) |
 | Suspicious browser sign-in | Identity Protection | Tier 1 |
 | ~~Password spray detection~~ | ~~Identity Protection / Sentinel~~ | ~~Tier 1~~ (completed: RB-0006) |
-| Atypical travel | Identity Protection | Tier 1 |
+| ~~Atypical travel~~ | ~~Identity Protection~~ | ~~Tier 1~~ (completed: RB-0009) |
 | Token anomaly detection | Identity Protection | Tier 1 |
 | Risky user confirmed compromised | Identity Protection | Tier 1 |
-| Suspicious inbox forwarding rule | Sentinel Analytics | Tier 1 |
+| ~~Suspicious inbox forwarding rule~~ | ~~Sentinel Analytics~~ | ~~Tier 1~~ (completed: RB-0008, moved to Email) |
 
 ## Log Sources
 

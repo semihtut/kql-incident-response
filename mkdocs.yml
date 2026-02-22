@@ -94,10 +94,15 @@ nav:
           - Anonymous IP Address Sign-In: runbooks/identity/anonymous-ip-address.md
           - MFA Fatigue Attack: runbooks/identity/mfa-fatigue-attack.md
           - Password Spray Detection: runbooks/identity/password-spray-detection.md
+          - Atypical Travel: runbooks/identity/atypical-travel.md
       - Endpoint: runbooks/endpoint/index.md
-      - Email: runbooks/email/index.md
+      - Email:
+          - runbooks/email/index.md
+          - Suspicious Inbox Forwarding Rule: runbooks/email/suspicious-inbox-forwarding-rule.md
       - Cloud Apps: runbooks/cloud-apps/index.md
-      - Azure Infrastructure: runbooks/azure-infrastructure/index.md
+      - Azure Infrastructure:
+          - runbooks/azure-infrastructure/index.md
+          - Mass Secret Retrieval from Key Vault: runbooks/azure-infrastructure/mass-secret-retrieval.md
       - Okta: runbooks/okta/index.md
   - Reference:
       - Log Sources: log-sources.md

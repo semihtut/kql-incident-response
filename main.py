@@ -188,6 +188,53 @@ def compute_categories(runbooks):
     return cats
 
 
+def render_data_check_timeline(checks):
+    """Generate the Data Availability Check timeline HTML from a list of check dicts."""
+    if not checks:
+        return ""
+
+    lines = [
+        '<div class="data-check-timeline" markdown="0">',
+        '  <div class="data-check-header">',
+        '    <span class="data-check-title">Data Availability Check</span>',
+        '    <span class="data-check-subtitle">Before starting the investigation, verify these tables contain data</span>',
+        "  </div>",
+        '  <div class="data-check-steps">',
+    ]
+
+    for i, check in enumerate(checks):
+        label = check.get("label", "")
+        is_primary = label == "primary"
+        is_optional = label == "optional"
+        step_class = "data-check-step primary" if is_primary else "data-check-step"
+
+        if i > 0:
+            lines.append('    <div class="data-check-connector"></div>')
+
+        lines.append(f'    <div class="{step_class}">')
+        lines.append(f'      <div class="data-check-num">{i + 1}</div>')
+        lines.append('      <div class="data-check-body">')
+        lines.append(f'        <code>{check["query"]}</code>')
+
+        if is_primary:
+            lines.append(
+                '        <span class="data-check-badge primary">PRIMARY</span>'
+            )
+        elif is_optional:
+            lines.append(
+                '        <span class="data-check-badge optional">OPTIONAL</span>'
+            )
+
+        desc = check.get("description", "")
+        lines.append(f"        <p>{desc}</p>")
+        lines.append("      </div>")
+        lines.append("    </div>")
+
+    lines.append("  </div>")
+    lines.append("</div>")
+    return "\n".join(lines)
+
+
 def define_env(env):
     """Called by mkdocs-macros-plugin at build time."""
     runbooks = scan_runbooks()
@@ -246,3 +293,9 @@ def define_env(env):
         "tactic_count": len(unique_tactics),
         "table_count": table_count,
     }
+
+    # Register macros
+    @env.macro
+    def data_check_timeline(checks=None):
+        """Render Data Availability Check timeline from frontmatter data_checks."""
+        return render_data_check_timeline(checks)
