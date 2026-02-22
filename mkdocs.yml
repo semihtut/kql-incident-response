@@ -104,6 +104,7 @@ nav:
           - Smart Lockout Triggered: runbooks/identity/smart-lockout-triggered.md
           - High-Risk ISP/Hosting Sign-Ins: runbooks/identity/high-risk-isp-sign-ins.md
           - Self-Service Password Reset Abuse: runbooks/identity/sspr-abuse.md
+          - Inactive Account Reactivation: runbooks/identity/inactive-account-reactivation.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md

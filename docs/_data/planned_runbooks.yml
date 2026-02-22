@@ -202,3 +202,19 @@
     - "Persistence"
     - "Initial Access"
     - "Defense Evasion"
+
+- id: RB-0019
+  title: "Inactive Account Reactivation"
+  severity: medium
+  tier: 2
+  category: identity
+  description: >
+    Detects dormant or inactive accounts that suddenly become active after
+    extended periods of inactivity. Covers dormancy period analysis,
+    reactivation context, post-reactivation activity audit, and org-wide
+    stale account abuse sweep.
+  tactics:
+    - "Initial Access"
+    - "Persistence"
+    - "Defense Evasion"
+    - "Credential Access"
