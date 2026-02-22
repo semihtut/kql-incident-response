@@ -540,6 +540,102 @@ AuditLogs
 - If the initiating user is unfamiliar, investigate that user account (may also be compromised)
 - Proceed to Step 4 for baseline comparison
 
+#### Query 3B: Workload Identity Federation (WIF) Credential Analysis
+
+```kql
+// ============================================================
+// QUERY 3B: Workload Identity Federation Abuse Detection
+// Purpose: Detect unauthorized federated identity credentials on service principals
+// Tables: AuditLogs
+// Investigation Step: 3B - WIF-specific credential analysis
+// ============================================================
+let TargetSPId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+let TargetAppId = "12345678-abcd-ef01-2345-6789abcdef01";
+let AlertTime = datetime(2026-02-22T14:00:00Z);
+let LookbackWindow = 90d;
+// --- WIF credential events ---
+AuditLogs
+| where TimeGenerated between (AlertTime - LookbackWindow .. AlertTime + 4h)
+| where OperationName in (
+    "Update application",
+    "Update application – Certificates and secrets management",
+    "Add service principal credentials",
+    "Update service principal"
+)
+| extend
+    TargetApp = tostring(TargetResources[0].displayName),
+    TargetAppId_Event = tostring(TargetResources[0].id),
+    ModifiedProps = TargetResources[0].modifiedProperties,
+    InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName),
+    InitiatedByApp = tostring(InitiatedBy.app.displayName),
+    InitiatedByIP = tostring(InitiatedBy.user.ipAddress)
+| where TargetAppId_Event == TargetAppId
+    or TargetApp has TargetSPId
+| mv-expand ModifiedProps
+| extend
+    PropertyName = tostring(ModifiedProps.displayName),
+    OldValue = tostring(ModifiedProps.oldValue),
+    NewValue = tostring(ModifiedProps.newValue)
+// Filter for federated identity credential changes
+| where PropertyName in ("FederatedIdentityCredentials", "KeyDescription")
+    and (NewValue has "federated" or NewValue has "Federated"
+        or NewValue has "issuer" or NewValue has "subject"
+        or NewValue has "audience")
+| extend
+    // Extract WIF configuration details
+    FederatedIssuer = extract(@'"issuer"\s*:\s*"([^"]+)"', 1, NewValue),
+    FederatedSubject = extract(@'"subject"\s*:\s*"([^"]+)"', 1, NewValue),
+    FederatedAudience = extract(@'"audience"\s*:\s*"([^"]+)"', 1, NewValue),
+    CredentialName = extract(@'"name"\s*:\s*"([^"]+)"', 1, NewValue)
+| extend
+    WIFRisk = case(
+        // Known legitimate issuers
+        FederatedIssuer has "token.actions.githubusercontent.com",
+            "REVIEW - GitHub Actions federation (verify repo/workflow)",
+        FederatedIssuer has "sts.windows.net",
+            "REVIEW - Azure AD federation (verify tenant)",
+        FederatedIssuer has "accounts.google.com",
+            "HIGH - Google Cloud federation (verify authorization)",
+        FederatedIssuer has "cognito-identity.amazonaws.com" or FederatedIssuer has "sts.amazonaws.com",
+            "HIGH - AWS federation (verify authorization)",
+        isnotempty(FederatedIssuer) and isempty(InitiatedByUser),
+            "CRITICAL - WIF added programmatically (no human actor)",
+        isnotempty(FederatedIssuer),
+            "HIGH - External IdP federation added (verify issuer)",
+        NewValue has "federated" or NewValue has "Federated",
+            "MEDIUM - Possible federated credential change",
+        "LOW"
+    )
+| where WIFRisk != "LOW"
+| project
+    TimeGenerated,
+    OperationName,
+    TargetApp,
+    InitiatedByUser = coalesce(InitiatedByUser, InitiatedByApp),
+    InitiatedByIP,
+    CredentialName,
+    FederatedIssuer,
+    FederatedSubject,
+    FederatedAudience,
+    WIFRisk,
+    Result
+| sort by TimeGenerated desc
+```
+
+**Why Workload Identity Federation abuse is the next-generation persistence threat:**
+
+- WIF allows **secretless authentication** from external identity providers (GitHub Actions, AWS, GCP) to Azure AD service principals
+- Unlike client secrets, WIF credentials have **no expiry** unless explicitly removed — perfect for persistent access
+- An attacker adds their own external IdP (e.g., their own Azure AD tenant or GitHub repo) as a federated credential → they can authenticate as the SP without any secret
+- WIF abuse is **harder to detect** than secret/certificate addition because there's no credential to rotate — the trust relationship itself is the backdoor
+- There is no `ResultType` or `RiskLevel` signal — the sign-in appears legitimate because the federation trust validates correctly
+
+**Decision guidance:**
+- **FederatedIssuer pointing to unknown Azure AD tenant** → Attacker's own tenant federating into your SP. Check the tenant ID against known partner tenants.
+- **FederatedSubject containing an unknown GitHub repo** → Attacker's repo gets to authenticate as your SP. Verify the repo with the DevOps team.
+- **WIF added programmatically (no InitiatedByUser)** → Automated persistence. Check which app made the change and whether it's authorized.
+- **Multiple WIF credentials on a high-privilege SP** → Redundant persistence — attacker creates multiple federation paths.
+
 ---
 
 ### Step 4: Baseline Comparison - Establish Normal Service Principal Behavior
@@ -1243,6 +1339,7 @@ Compromise third-party OAuth application
 | Q1 | Service principal risk assessment and context | AuditLogs | 1 |
 | Q2 | Service principal sign-in pattern analysis | AADServicePrincipalSignInLogs | 2 |
 | Q3 | Credential lifecycle timeline | AuditLogs | 3 |
+| Q3B | Workload Identity Federation abuse | AuditLogs | 3 |
 | Q4 | 30-day SP behavior baseline [MANDATORY] | AADServicePrincipalSignInLogs | 4 |
 | Q5 | Permission and API access audit | AuditLogs | 5 |
 | Q6A | Azure resource access via SP | AzureActivity | 6A |

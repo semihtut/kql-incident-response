@@ -268,6 +268,65 @@ MicrosoftGraphActivityLogs
 - **HasTopFilter > 0** = using `$top=999` to maximize data per request — hallmark of enumeration tools
 - **CallerType = "Service Principal"** = OAuth app being used for enumeration (see [RB-0011](consent-grant-attack.md))
 
+#### Query 1B: Azure Portal / PowerShell Bulk User Export Detection
+
+```kql
+// Step 1B: Bulk User Export Detection via Azure Portal or PowerShell
+// Table: AuditLogs | Detects bulk directory data export operations
+let AlertTime = datetime(2026-02-22T14:30:00Z);
+let LookbackWindow = 24h;
+AuditLogs
+| where TimeGenerated between ((AlertTime - LookbackWindow) .. (AlertTime + 4h))
+| where OperationName in (
+    "Download Users",
+    "Export users",
+    "Bulk download users",
+    "Export group members",
+    "Download group members",
+    "Get user",
+    "List users"
+)
+    or (Category == "UserManagement"
+        and OperationName has_any ("Export", "Download", "Bulk"))
+| extend
+    ActorUPN = tostring(InitiatedBy.user.userPrincipalName),
+    ActorIP = tostring(InitiatedBy.user.ipAddress),
+    ActorApp = tostring(InitiatedBy.app.displayName),
+    TargetResource = tostring(TargetResources[0].displayName)
+| project
+    TimeGenerated,
+    OperationName,
+    ActorUPN,
+    ActorIP,
+    ActorApp,
+    TargetResource,
+    Result,
+    ExportMethod = case(
+        ActorApp has "Azure Portal", "Azure Portal (UI Download)",
+        ActorApp has "Graph" or ActorApp has "PowerShell", "PowerShell / Graph API",
+        ActorApp has "Azure CLI", "Azure CLI",
+        isnotempty(ActorApp), strcat("App: ", ActorApp),
+        "Unknown"
+    ),
+    ExportRisk = case(
+        OperationName has_any ("Download", "Export", "Bulk"),
+            "HIGH - Explicit bulk data export operation",
+        OperationName == "List users" and Result == "success",
+            "MEDIUM - User listing (may be programmatic export)",
+        "LOW"
+    )
+| where ExportRisk != "LOW"
+| sort by TimeGenerated asc
+```
+
+**What to look for:**
+
+- **"Download Users" from Azure Portal** = User clicked the "Download users" button in the Entra ID portal — exports ALL users to CSV including UPN, display name, job title, department
+- **ExportMethod = "PowerShell / Graph API"** = Programmatic export via `Get-MgUser -All` or `Export-Csv` — higher risk because it can include more fields than portal export
+- **Multiple export operations in short succession** = Exporting users, groups, AND members separately — comprehensive directory data harvesting
+- **ActorIP from hosting/VPS** = Export from non-corporate infrastructure — strong compromise indicator
+- If this query returns results, correlate the actor with Step 2 sign-in context and Step 1 Graph API enumeration
+
 ---
 
 ### Step 2: Actor Identity and Sign-In Context
@@ -931,6 +990,7 @@ BehaviorAnalytics
 | Step | Query | Purpose | Primary Table |
 |---|---|---|---|
 | 1 | Graph API Enumeration Detection | Identify high-volume directory reads | MicrosoftGraphActivityLogs |
+| 1B | Bulk User Export Detection | Detect Azure Portal/PowerShell bulk exports | AuditLogs |
 | 2 | Actor Identity and Sign-In Context | Correlate enumeration with sign-in data | SigninLogs + GraphLogs |
 | 3 | Enumeration Target Analysis | Analyze what directory objects were queried | MicrosoftGraphActivityLogs |
 | 4 | Baseline Comparison | Compare against 14-day API usage history | MicrosoftGraphActivityLogs |

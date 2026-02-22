@@ -361,8 +361,99 @@ AuditLogs
 
 **Next action:**
 - If policy deleted or disabled, proceed immediately to containment and restoration
-- If exclusions modified, identify who/what was excluded and check for compromise
+- If exclusions modified, run Query 1B below to identify exactly who was added to exclusions
 - Proceed to Step 2 to assess whether the modifying admin is compromised
+
+#### Query 1B: CA Policy Exclusion Delta Analysis
+
+```kql
+// ============================================================
+// QUERY 1B: CA Policy Exclusion Addition Detection
+// Purpose: Parse ExcludeUsers/ExcludeGroups changes to identify who was excluded
+// Tables: AuditLogs
+// Investigation Step: 1B - Exclusion-specific deep analysis
+// ============================================================
+let ActorUPN = "suspicious.admin@contoso.com";
+let AlertTime = datetime(2026-02-22T14:00:00Z);
+let LookbackWindow = 48h;
+AuditLogs
+| where TimeGenerated between (AlertTime - LookbackWindow .. AlertTime + 4h)
+| where OperationName == "Update conditional access policy"
+| extend
+    ModifyingUser = tostring(InitiatedBy.user.userPrincipalName),
+    ModifyingIP = tostring(InitiatedBy.user.ipAddress),
+    PolicyName = tostring(TargetResources[0].displayName),
+    PolicyId = tostring(TargetResources[0].id),
+    ModifiedProps = TargetResources[0].modifiedProperties
+| mv-expand ModifiedProps
+| extend
+    PropertyName = tostring(ModifiedProps.displayName),
+    OldValue = tostring(ModifiedProps.oldValue),
+    NewValue = tostring(ModifiedProps.newValue)
+| where PropertyName has_any (
+    "ExcludeUsers", "ExcludeGroups", "ExcludeRoles",
+    "ExcludeLocations", "ExcludeApplications",
+    "Conditions"
+)
+// Parse exclusion changes
+| extend
+    OldExcludedEntities = extract_all(@'"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"', OldValue),
+    NewExcludedEntities = extract_all(@'"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"', NewValue)
+| extend
+    AddedExclusions = set_difference(NewExcludedEntities, OldExcludedEntities),
+    RemovedExclusions = set_difference(OldExcludedEntities, NewExcludedEntities)
+| where array_length(AddedExclusions) > 0 or array_length(RemovedExclusions) > 0
+| extend
+    ExclusionCategory = case(
+        PropertyName has "Users", "USER_EXCLUSION",
+        PropertyName has "Groups", "GROUP_EXCLUSION",
+        PropertyName has "Roles", "ROLE_EXCLUSION",
+        PropertyName has "Locations", "LOCATION_EXCLUSION",
+        PropertyName has "Applications", "APP_EXCLUSION",
+        PropertyName has "Conditions" and NewValue has "excludeUsers", "USER_EXCLUSION (in Conditions)",
+        PropertyName has "Conditions" and NewValue has "excludeGroups", "GROUP_EXCLUSION (in Conditions)",
+        "OTHER_EXCLUSION"
+    ),
+    ExclusionRisk = case(
+        array_length(AddedExclusions) > 5,
+            "CRITICAL - Mass exclusion (5+ entities added at once)",
+        PropertyName has "Roles" and array_length(AddedExclusions) > 0,
+            "CRITICAL - Role excluded from CA policy (admin bypass)",
+        PropertyName has "Users" and array_length(AddedExclusions) > 0,
+            "HIGH - Specific user(s) excluded from policy",
+        PropertyName has "Groups" and array_length(AddedExclusions) > 0,
+            "HIGH - Group excluded from policy (blast radius depends on group size)",
+        PropertyName has "Locations" and array_length(AddedExclusions) > 0,
+            "HIGH - Location excluded (attacker IP range whitelisted?)",
+        array_length(RemovedExclusions) > 0 and array_length(AddedExclusions) == 0,
+            "LOW - Exclusions removed (security posture improved)",
+        "MEDIUM - Exclusion change requires review"
+    )
+| project
+    TimeGenerated,
+    PolicyName,
+    PolicyId,
+    ModifyingUser,
+    ModifyingIP,
+    ExclusionCategory,
+    AddedExclusions,
+    RemovedExclusions,
+    ExclusionRisk
+| sort by ExclusionRisk asc, TimeGenerated asc
+```
+
+**Why CA exclusion additions are the most dangerous subtle attack:**
+
+- The CA policy remains "active" and appears healthy in the admin portal — there's no visible alert that security was weakened
+- An excluded user/group **completely bypasses** the policy's controls: MFA requirement, device compliance, location restriction — everything
+- Attackers add their compromised account (or a service account they control) to the exclusion list, then use that account without any CA restrictions
+- If a **role** is excluded (e.g., Global Admin role), ALL accounts with that role bypass the policy — massive blast radius
+
+**Decision guidance:**
+- **AddedExclusions containing the modifying admin's own ObjectId** → The admin excluded themselves. Unless this is a documented break-glass scenario, treat as confirmed compromise.
+- **GROUP_EXCLUSION with a large group** → Check group membership count. An attacker may create a new group, add their target accounts, then exclude the group from CA.
+- **LOCATION_EXCLUSION** → The attacker may have added a Named Location for their VPS/hosting IP and then excluded it from CA.
+- **Mass exclusion (5+ entities)** → Bulk operation suggests automated tooling, not manual admin work.
 
 ---
 
@@ -1130,6 +1221,7 @@ Revoke-MgUserSignInSession -UserId "suspicious.admin@contoso.com"
 | # | Query | Table | Purpose |
 |---|---|---|---|
 | 1 | Policy Change Event Analysis | AuditLogs | Identify CA changes, before/after state, severity |
+| 1B | CA Exclusion Delta Analysis | AuditLogs | Parse ExcludeUsers/ExcludeGroups additions |
 | 2 | Actor Compromise Assessment | SigninLogs + AADUserRiskEvents | Check if modifying admin is compromised |
 | 3 | Policy Impact Analysis | SigninLogs | Quantify security exposure from the change |
 | 4 | Baseline Comparison | AuditLogs | Compare against normal policy change patterns |

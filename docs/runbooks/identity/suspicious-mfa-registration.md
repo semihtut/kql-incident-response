@@ -377,7 +377,111 @@ AuditLogs
 **Next action:**
 - If suspicious MFA registration found, proceed to Step 2 for sign-in context
 - Note the registration IP for correlation across all subsequent queries
-- If FIDO2/Passkey registered, treat as highest priority
+- If FIDO2/Passkey registered, treat as highest priority — run Query 1B below
+
+#### Query 1B: FIDO2 / Passkey Registration — Location and Device Anomaly Analysis
+
+```kql
+// ============================================================
+// QUERY 1B: FIDO2/Passkey Registration Anomaly Detection
+// Purpose: Deep analysis of FIDO2/Passkey registrations with location and device context
+// Tables: AuditLogs + SigninLogs
+// Investigation Step: 1B - FIDO2/Passkey-specific analysis
+// ============================================================
+let TargetUPN = "compromised.user@contoso.com";
+let AlertTime = datetime(2026-02-22T14:00:00Z);
+let LookbackWindow = 48h;
+let HostingASNs = dynamic([14061, 16509, 14618, 15169, 396982, 8075, 13335, 24940,
+    16276, 63949, 20473, 46606, 36352, 55286, 51167, 9009]);
+// --- FIDO2/Passkey registration events ---
+let FIDO2Registrations = AuditLogs
+    | where TimeGenerated between (AlertTime - LookbackWindow .. AlertTime + 4h)
+    | where OperationName in (
+        "User registered security info",
+        "Admin registered security info"
+    )
+    | extend
+        ActorUPN = tostring(InitiatedBy.user.userPrincipalName),
+        ActorIP = tostring(InitiatedBy.user.ipAddress),
+        ModifiedProps = TargetResources[0].modifiedProperties
+    | where ActorUPN =~ TargetUPN
+        or tostring(TargetResources[0].userPrincipalName) =~ TargetUPN
+    | mv-expand ModifiedProps
+    | extend
+        PropertyName = tostring(ModifiedProps.displayName),
+        NewValue = tostring(ModifiedProps.newValue)
+    | where NewValue has_any ("fido2", "FIDO2", "passkey", "Passkey", "webauthn",
+        "windowsHelloForBusiness", "SecurityKey")
+    | project
+        RegistrationTime = TimeGenerated,
+        ActorUPN,
+        RegistrationIP = ActorIP,
+        MethodType = case(
+            NewValue has "fido2" or NewValue has "SecurityKey", "FIDO2 Security Key",
+            NewValue has "passkey", "Passkey (Device-bound)",
+            NewValue has "windowsHelloForBusiness", "Windows Hello for Business",
+            "Phishing-Resistant Method"
+        ),
+        CorrelationId;
+// --- Enrich with sign-in location context ---
+FIDO2Registrations
+| join kind=leftouter (
+    SigninLogs
+    | where TimeGenerated between (AlertTime - LookbackWindow .. AlertTime + 4h)
+    | where UserPrincipalName =~ TargetUPN
+    | where ResultType == "0"
+    | extend
+        ParsedLocation = parse_json(LocationDetails),
+        ParsedDevice = parse_json(DeviceDetail)
+    | project
+        SignInTime = TimeGenerated,
+        IPAddress,
+        AutonomousSystemNumber,
+        Country = tostring(ParsedLocation.countryOrRegion),
+        City = tostring(ParsedLocation.city),
+        DeviceOS = tostring(ParsedDevice.operatingSystem),
+        Browser = tostring(ParsedDevice.browser),
+        IsManaged = tostring(ParsedDevice.isManaged),
+        IsCompliant = tostring(ParsedDevice.isCompliant),
+        CorrelationId
+) on CorrelationId
+| extend
+    IsHostingIP = AutonomousSystemNumber in (HostingASNs),
+    RegistrationRisk = case(
+        IsHostingIP,
+            "CRITICAL - FIDO2/Passkey registered from hosting/VPS infrastructure",
+        IsManaged != "true" and IsCompliant != "true",
+            "CRITICAL - Registered from unmanaged, non-compliant device",
+        Country != "" and Country !in ("US", "GB", "DE", "FR", "NL"),
+            "HIGH - Registered from unusual country (verify with user)",
+        "MEDIUM - Review registration context"
+    )
+| project
+    RegistrationTime,
+    MethodType,
+    RegistrationIP,
+    Country,
+    City,
+    DeviceOS,
+    Browser,
+    IsManaged,
+    IsCompliant,
+    IsHostingIP,
+    RegistrationRisk
+| sort by RegistrationTime asc
+```
+
+**Why FIDO2/Passkey requires special attention:**
+
+- FIDO2/Passkey is **phishing-resistant** — once an attacker registers their own hardware key, they can bypass all phishing-based defenses
+- Unlike Authenticator app or SMS, a FIDO2 key cannot be remotely revoked through password reset alone — the key must be explicitly removed from the user's authentication methods
+- An attacker with a registered FIDO2 key maintains **persistent access** even after password rotation, MFA reset, and session revocation
+- FIDO2 keys are bound to a specific device — check if the device matches the user's known corporate device or a new unknown device
+
+**Decision guidance:**
+- **RegistrationRisk = "CRITICAL"** → FIDO2 key registered from VPS or unmanaged device. This is a persistence mechanism. Remove the key immediately and investigate the registration session.
+- **Any FIDO2 registration from a non-corporate IP** → Verify directly with the user (phone call, not email). Attackers can respond to email-based verification.
+- If the FIDO2 registration occurred **within hours of a password reset or AiTM attack**, treat as confirmed compromise.
 
 ---
 
@@ -1236,6 +1340,7 @@ Revoke-MgUserSignInSession -UserId $UserId
 | # | Query | Table | Purpose |
 |---|---|---|---|
 | 1 | MFA Registration Event Analysis | AuditLogs | Identify registration events, methods, IPs, timing |
+| 1B | FIDO2/Passkey Registration Anomaly | AuditLogs + SigninLogs | Deep analysis of FIDO2/Passkey registrations with location context |
 | 2 | Pre-Registration Sign-In Context | SigninLogs | Analyze sign-in risk before MFA registration |
 | 3 | Risk Event Correlation | AADUserRiskEvents | Correlate registration with Identity Protection risks |
 | 4 | Baseline Comparison | AuditLogs | Compare against user/org MFA registration history |
