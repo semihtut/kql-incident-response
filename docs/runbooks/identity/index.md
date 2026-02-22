@@ -8,6 +8,7 @@ Investigation runbooks for identity-based alerts from Microsoft Entra ID, Identi
 |----|-----------|----------|-----------------|
 | RB-0001 | [Unfamiliar Sign-In Properties](unfamiliar-sign-in-properties.md) | Medium | SigninLogs, AADUserRiskEvents, AADRiskyUsers, AuditLogs, OfficeActivity |
 | RB-0002 | [Impossible Travel Activity](impossible-travel-activity.md) | Medium | SigninLogs, AADUserRiskEvents, AADNonInteractiveUserSignInLogs, AuditLogs, OfficeActivity |
+| RB-0003 | [Leaked Credentials](leaked-credentials.md) | High | AADUserRiskEvents, AADRiskyUsers, SigninLogs, AADNonInteractiveUserSignInLogs, AuditLogs, OfficeActivity |
 
 ## Planned Runbooks
 
@@ -19,7 +20,7 @@ Investigation runbooks for identity-based alerts from Microsoft Entra ID, Identi
 | Password spray detection | Identity Protection / Sentinel | Tier 1 |
 | Atypical travel | Identity Protection | Tier 1 |
 | Token anomaly detection | Identity Protection | Tier 1 |
-| Leaked credentials | Identity Protection | Tier 1 |
+| ~~Leaked credentials~~ | ~~Identity Protection~~ | ~~Tier 1~~ (completed: RB-0003) |
 | Risky user confirmed compromised | Identity Protection | Tier 1 |
 | Suspicious inbox forwarding rule | Sentinel Analytics | Tier 1 |
 

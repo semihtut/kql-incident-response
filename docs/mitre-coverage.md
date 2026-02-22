@@ -5,15 +5,15 @@ Visual coverage map of MITRE ATT&CK techniques across all published runbooks.
 ## Coverage Overview
 
 <div class="coverage-bar">
-  <div class="coverage-bar-fill coverage-covered" style="width: 50%">7 Covered</div>
-  <div class="coverage-bar-fill coverage-gap" style="width: 50%">7 Gaps</div>
+  <div class="coverage-bar-fill coverage-covered" style="width: 57%">8 Covered</div>
+  <div class="coverage-bar-fill coverage-gap" style="width: 43%">6 Gaps</div>
 </div>
 
 | Metric | Count |
 |--------|-------|
-| Tactics covered | **7** of 14 |
-| Techniques mapped | **16** |
-| Runbooks published | **2** |
+| Tactics covered | **8** of 14 |
+| Techniques mapped | **17** |
+| Runbooks published | **3** |
 
 ---
 
@@ -26,10 +26,10 @@ Visual coverage map of MITRE ATT&CK techniques across all published runbooks.
 
 <div class="mitre-column" markdown>
 <div class="mitre-column-header" style="background: var(--mitre-recon);">Reconnaissance</div>
-<div class="mitre-technique mitre-gap">
-<span class="mitre-technique-id">TA0043</span>
-No techniques mapped yet
-</div>
+<a class="mitre-technique mitre-covered" href="runbooks/identity/leaked-credentials/">
+<span class="mitre-technique-id">T1589.001</span>
+Gather Victim Identity: Credentials
+</a>
 </div>
 
 <div class="mitre-column" markdown>
@@ -174,22 +174,23 @@ No techniques mapped yet
 
 ## Technique Detail
 
-Techniques mapped from [RB-0001: Unfamiliar Sign-In Properties](runbooks/identity/unfamiliar-sign-in-properties.md) and [RB-0002: Impossible Travel Activity](runbooks/identity/impossible-travel-activity.md):
+Techniques mapped from [RB-0001: Unfamiliar Sign-In Properties](runbooks/identity/unfamiliar-sign-in-properties.md), [RB-0002: Impossible Travel Activity](runbooks/identity/impossible-travel-activity.md), and [RB-0003: Leaked Credentials](runbooks/identity/leaked-credentials.md):
 
 | Technique ID | Technique Name | Tactic | Confidence | Runbook |
 |-------------|----------------|--------|------------|---------|
-| T1078.004 | Valid Accounts: Cloud Accounts | Initial Access | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
-| T1098 | Account Manipulation | Persistence | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
+| T1078.004 | Valid Accounts: Cloud Accounts | Initial Access | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
+| T1098 | Account Manipulation | Persistence | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
 | T1110.003 | Brute Force: Password Spraying | Credential Access | <span class="severity-badge severity-medium">Probable</span> | RB-0001 |
-| T1110.004 | Brute Force: Credential Stuffing | Credential Access | <span class="severity-badge severity-medium">Probable</span> | RB-0001 |
-| T1114.003 | Email Collection: Email Forwarding Rule | Collection | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
-| T1528 | Steal Application Access Token | Credential Access | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
-| T1530 | Data from Cloud Storage Object | Collection | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
-| T1534 | Internal Spearphishing | Lateral Movement | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
+| T1110.004 | Brute Force: Credential Stuffing | Credential Access | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0003 |
+| T1114.003 | Email Collection: Email Forwarding Rule | Collection | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
+| T1528 | Steal Application Access Token | Credential Access | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
+| T1530 | Data from Cloud Storage Object | Collection | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
+| T1534 | Internal Spearphishing | Lateral Movement | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
 | T1539 | Steal Web Session Cookie | Credential Access | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
 | T1550.004 | Use Alternate Auth Material: Web Session Cookie | Defense Evasion | <span class="severity-badge severity-info">Confirmed</span> | RB-0002 |
-| T1556.006 | Modify Authentication Process: MFA | Persistence, Defense Evasion | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
-| T1564.008 | Hide Artifacts: Email Hiding Rules | Persistence, Defense Evasion | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002 |
+| T1556.006 | Modify Authentication Process: MFA | Persistence, Defense Evasion | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
+| T1564.008 | Hide Artifacts: Email Hiding Rules | Persistence, Defense Evasion | <span class="severity-badge severity-info">Confirmed</span> | RB-0001, RB-0002, RB-0003 |
+| T1589.001 | Gather Victim Identity Info: Credentials | Reconnaissance | <span class="severity-badge severity-info">Confirmed</span> | RB-0003 |
 
 ---
 
@@ -199,6 +200,7 @@ Techniques mapped from [RB-0001: Unfamiliar Sign-In Properties](runbooks/identit
 
 - MFA fatigue / MFA bombing
 - ~~Impossible travel detection~~ (completed: RB-0002)
+- ~~Leaked credentials~~ (completed: RB-0003)
 - Suspicious browser sign-in
 - Password spray detection
 - Risky sign-in from anonymous IP

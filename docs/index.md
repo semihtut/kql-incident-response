@@ -11,11 +11,11 @@ hide:
 
 <div class="kql-hero-stats">
   <div class="kql-stat">
-    <span class="number">2</span>
+    <span class="number">3</span>
     <span class="label">Runbooks</span>
   </div>
   <div class="kql-stat">
-    <span class="number">16</span>
+    <span class="number">17</span>
     <span class="label">MITRE Techniques</span>
   </div>
   <div class="kql-stat">
@@ -23,7 +23,7 @@ hide:
     <span class="label">Log Tables</span>
   </div>
   <div class="kql-stat">
-    <span class="number">7</span>
+    <span class="number">8</span>
     <span class="label">Tactics Covered</span>
   </div>
 </div>
@@ -115,6 +115,24 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 ## Latest Runbooks
 
 <div class="latest-runbooks">
+  <a class="runbook-card" href="runbooks/identity/leaked-credentials/">
+    <div class="runbook-card-header">
+      <span class="runbook-card-id">RB-0003</span>
+      <span class="severity-badge severity-high">High</span>
+    </div>
+    <h3>Leaked Credentials</h3>
+    <div class="runbook-card-description">
+      Entra ID Identity Protection offline detection for credentials found in dark web dumps and info-stealer logs. Covers password timeline, credential stuffing detection, legacy auth exposure, and blast radius assessment.
+    </div>
+    <div class="runbook-card-footer">
+      <span class="mitre-tag mitre-recon">Recon</span>
+      <span class="mitre-tag mitre-initial-access">Initial Access</span>
+      <span class="mitre-tag mitre-cred-access">Cred Access</span>
+      <span class="mitre-tag mitre-persistence">Persistence</span>
+      <span class="tier-badge">Tier 1</span>
+      <span class="status-badge status-complete">Complete</span>
+    </div>
+  </a>
   <a class="runbook-card" href="runbooks/identity/impossible-travel-activity/">
     <div class="runbook-card-header">
       <span class="runbook-card-id">RB-0002</span>
@@ -133,24 +151,6 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
       <span class="status-badge status-complete">Complete</span>
     </div>
   </a>
-  <a class="runbook-card" href="runbooks/identity/unfamiliar-sign-in-properties/">
-    <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0001</span>
-      <span class="severity-badge severity-medium">Medium</span>
-    </div>
-    <h3>Unfamiliar Sign-In Properties</h3>
-    <div class="runbook-card-description">
-      Entra ID Identity Protection risk detection. Covers credential compromise via valid accounts, post-access persistence, inbox rules, MFA manipulation, and OAuth consent abuse.
-    </div>
-    <div class="runbook-card-footer">
-      <span class="mitre-tag mitre-initial-access">Initial Access</span>
-      <span class="mitre-tag mitre-persistence">Persistence</span>
-      <span class="mitre-tag mitre-cred-access">Cred Access</span>
-      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
-      <span class="tier-badge">Tier 1</span>
-      <span class="status-badge status-complete">Complete</span>
-    </div>
-  </a>
 </div>
 
 ---
@@ -159,7 +159,7 @@ Copy KQL queries into Sentinel Log Analytics and follow the decision tree.
 
 | Category | Runbooks | Status |
 |----------|----------|--------|
-| [Identity](runbooks/identity/index.md) | 2 completed | :material-check-circle:{ .severity-info } Active |
+| [Identity](runbooks/identity/index.md) | 3 completed | :material-check-circle:{ .severity-info } Active |
 | [Endpoint](runbooks/endpoint/index.md) | Planned | Tier 2 |
 | [Email](runbooks/email/index.md) | Planned | Tier 2 |
 | [Cloud Apps](runbooks/cloud-apps/index.md) | Planned | Tier 2 |

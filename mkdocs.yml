@@ -89,6 +89,7 @@ nav:
           - runbooks/identity/index.md
           - Unfamiliar Sign-In Properties: runbooks/identity/unfamiliar-sign-in-properties.md
           - Impossible Travel Activity: runbooks/identity/impossible-travel-activity.md
+          - Leaked Credentials: runbooks/identity/leaked-credentials.md
       - Endpoint: runbooks/endpoint/index.md
       - Email: runbooks/email/index.md
       - Cloud Apps: runbooks/cloud-apps/index.md

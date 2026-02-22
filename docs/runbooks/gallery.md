@@ -68,9 +68,31 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
     </div>
   </a>
 
-  <div class="runbook-card runbook-planned" data-severity="high" data-tactics="initial-access,cred-access">
+  <a class="runbook-card" href="../runbooks/identity/leaked-credentials/" data-severity="high" data-tactics="recon,initial-access,persistence,defense-evasion,cred-access,lateral-movement,collection">
     <div class="runbook-card-header">
       <span class="runbook-card-id">RB-0003</span>
+      <span class="severity-badge severity-high">High</span>
+    </div>
+    <h3>Leaked Credentials</h3>
+    <div class="runbook-card-description">
+      Entra ID Identity Protection offline risk detection for credentials found in dark web dumps and info-stealer logs. Covers password timeline analysis, credential stuffing detection, legacy auth exposure, MFA assessment, and post-access blast radius.
+    </div>
+    <div class="runbook-card-footer">
+      <span class="mitre-tag mitre-recon">Recon</span>
+      <span class="mitre-tag mitre-initial-access">Initial Access</span>
+      <span class="mitre-tag mitre-cred-access">Cred Access</span>
+      <span class="mitre-tag mitre-persistence">Persistence</span>
+      <span class="mitre-tag mitre-defense-evasion">Def Evasion</span>
+      <span class="mitre-tag mitre-lateral-movement">Lateral Mov</span>
+      <span class="mitre-tag mitre-collection">Collection</span>
+      <span class="tier-badge">Tier 1</span>
+      <span class="status-badge status-complete">Complete</span>
+    </div>
+  </a>
+
+  <div class="runbook-card runbook-planned" data-severity="high" data-tactics="initial-access,cred-access">
+    <div class="runbook-card-header">
+      <span class="runbook-card-id">RB-0004</span>
       <span class="severity-badge severity-high">High</span>
     </div>
     <h3>MFA Fatigue Attack</h3>
@@ -87,7 +109,7 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
 
   <div class="runbook-card runbook-planned" data-severity="high" data-tactics="cred-access,lateral-movement">
     <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0004</span>
+      <span class="runbook-card-id">RB-0005</span>
       <span class="severity-badge severity-high">High</span>
     </div>
     <h3>Password Spray Detection</h3>
@@ -104,7 +126,7 @@ Browse all incident response runbooks. Filter by severity or MITRE ATT&CK tactic
 
   <div class="runbook-card runbook-planned" data-severity="critical" data-tactics="cred-access,collection,exfiltration">
     <div class="runbook-card-header">
-      <span class="runbook-card-id">RB-0005</span>
+      <span class="runbook-card-id">RB-0006</span>
       <span class="severity-badge severity-critical">Critical</span>
     </div>
     <h3>Mass Secret Retrieval from Key Vault</h3>
