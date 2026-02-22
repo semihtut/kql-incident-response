@@ -1170,6 +1170,13 @@ html {
   margin: 1rem 0 2rem;
   border: 1px solid var(--kql-border);
   overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure runbook-meta doesn't break out of the Material content column */
+.md-typeset .runbook-meta {
+  contain: inline-size;
 }
 
 [data-md-color-scheme="slate"] .runbook-meta {
