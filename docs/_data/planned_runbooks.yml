@@ -63,3 +63,19 @@
     - "Initial Access"
     - "Defense Evasion"
     - "Credential Access"
+
+- id: RB-0010
+  title: "Suspicious Service Principal Activity"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects compromised or abused service principals (app registrations) via
+    credential theft, unauthorized credential additions, anomalous sign-in
+    patterns, and excessive resource access.
+  tactics:
+    - "Persistence"
+    - "Privilege Escalation"
+    - "Credential Access"
+    - "Defense Evasion"
+    - "Lateral Movement"

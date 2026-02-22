@@ -95,6 +95,7 @@ nav:
           - MFA Fatigue Attack: runbooks/identity/mfa-fatigue-attack.md
           - Password Spray Detection: runbooks/identity/password-spray-detection.md
           - Atypical Travel: runbooks/identity/atypical-travel.md
+          - Suspicious Service Principal Activity: runbooks/identity/suspicious-service-principal-activity.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md
