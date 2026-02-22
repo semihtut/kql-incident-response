@@ -102,6 +102,7 @@ nav:
           - AiTM Phishing / Anomalous Token: runbooks/identity/aitm-phishing-detection.md
           - Conditional Access Manipulation: runbooks/identity/conditional-access-manipulation.md
           - Smart Lockout Triggered: runbooks/identity/smart-lockout-triggered.md
+          - High-Risk ISP/Hosting Sign-Ins: runbooks/identity/high-risk-isp-sign-ins.md
       - Endpoint: runbooks/endpoint/index.md
       - Email:
           - runbooks/email/index.md

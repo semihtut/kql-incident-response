@@ -171,3 +171,19 @@
     - "Credential Access"
     - "Initial Access"
     - "Defense Evasion"
+
+- id: RB-0017
+  title: "High-Risk ISP/Hosting Provider Sign-Ins"
+  severity: high
+  tier: 2
+  category: identity
+  description: >
+    Detects sign-ins from VPS providers, cloud hosting platforms, Tor exit
+    nodes, and residential proxy networks. Covers ASN-based infrastructure
+    classification, post-authentication activity audit, and org-wide hosting
+    infrastructure sign-in sweep.
+  tactics:
+    - "Initial Access"
+    - "Defense Evasion"
+    - "Credential Access"
+    - "Command and Control"
